@@ -78,15 +78,15 @@
         <main class="space-y-6 lg:space-y-8">
             <section>
                 <h2 class="text-lg font-semibold text-gray-700 mb-2">Top 5 Highest Funding Rates</h2>
-                <div class="overflow-x-auto -mx-4 sm:mx-0">
-                    <div class="min-w-[800px] px-4 sm:min-w-0 sm:px-0">
-                        <div id="highRatesTable"></div>
+                <div class="overflow-x-auto -mx-4 sm:mx-0 w-auto sm:w-auto">
+                    <div class="px-4 sm:px-0">
+                        <div id="highRatesTable" class="w-auto"></div>
                     </div>
                 </div>
                 <h2 class="text-lg font-semibold text-gray-700 mb-2 mt-6">Top 5 Lowest Funding Rates</h2>
-                <div class="overflow-x-auto -mx-4 sm:mx-0">
-                    <div class="min-w-[800px] px-4 sm:min-w-0 sm:px-0">
-                        <div id="lowRatesTable"></div>
+                <div class="overflow-x-auto -mx-4 sm:mx-0 w-auto sm:w-auto">
+                    <div class="px-4 sm:px-0">
+                        <div id="lowRatesTable" class="w-auto"></div>
                     </div>
                 </div>
             </section>
@@ -232,7 +232,7 @@
                     document.getElementById('allMarketsTable').innerHTML = '';
                 }
             }
-            function getColumns(simulate) {
+            function getColumns(simulate, tableType = 'all') {
                 const formatCell = (value, digits, isDollar = false) => {
                     const isPositive = value >= 0;
                     const formattedValue = isDollar ? 
@@ -241,100 +241,108 @@
                     return gridjs.html(`<div class="text-right ${isPositive ? 'text-green-600' : 'text-red-600'}">${formattedValue}</div>`);
                 };
 
-                return [
+                const baseColumns = [
                     { 
                         name: 'Ticker', 
-                        width: '11%',
+                        width: tableType === 'top5' ? 'auto' : '11%',
                         attributes: (cell) => ({ 
-                            style: 'padding: 0.25rem 0.5rem; font-size: 0.8rem;', 
+                            style: 'padding: 0.25rem 0.5rem; font-size: 0.8rem; white-space: nowrap;', 
                             class: 'cursor-pointer hover:bg-gray-50' 
                         })
                     },
                     {
                         name: simulate ? 'Year [$]' : 'Year [%]',
-                        width: '11%',
+                        width: tableType === 'top5' ? 'auto' : '11%',
                         formatter: cell => formatCell(cell, 2, simulate),
                         attributes: (cell) => ({ 
-                            style: 'padding: 0.25rem 0.5rem; font-size: 0.8rem; text-align:right;',
+                            style: 'padding: 0.25rem 0.5rem; font-size: 0.8rem; text-align:right; white-space: nowrap;',
                             class: 'cursor-pointer hover:bg-gray-50'
                         })
                     },
                     {
                         name: simulate ? 'Day [$]' : 'Day [%]',
-                        width: '11%',
+                        width: tableType === 'top5' ? 'auto' : '11%',
                         formatter: cell => formatCell(cell, 4, simulate),
                         attributes: (cell) => ({ 
-                            style: 'padding: 0.25rem 0.5rem; font-size: 0.8rem; text-align:right;',
+                            style: 'padding: 0.25rem 0.5rem; font-size: 0.8rem; text-align:right; white-space: nowrap;',
                             class: 'cursor-pointer hover:bg-gray-50'
                         })
                     },
                     {
                         name: simulate ? 'Hour [$]' : 'Hour [%]',
-                        width: '11%',
+                        width: tableType === 'top5' ? 'auto' : '11%',
                         formatter: cell => formatCell(cell, 6, simulate),
                         attributes: (cell) => ({ 
-                            style: 'padding: 0.25rem 0.5rem; font-size: 0.8rem; text-align:right;',
+                            style: 'padding: 0.25rem 0.5rem; font-size: 0.8rem; text-align:right; white-space: nowrap;',
                             class: 'cursor-pointer hover:bg-gray-50'
                         })
-                    },
-                    {
-                        name: 'Long OI',
-                        width: '11%',
-                        formatter: cell => gridjs.html(`<div class="text-right">${formatNumber(cell)}</div>`),
-                        attributes: (cell) => ({ style: 'padding: 0.25rem 0.5rem; font-size: 0.8rem; text-align:right;', class: 'cursor-pointer hover:bg-gray-50 hidden sm:table-cell' })
-                    },
-                    {
-                        name: 'Short OI',
-                        width: '11%',
-                        formatter: cell => gridjs.html(`<div class="text-right">${formatNumber(cell)}</div>`),
-                        attributes: (cell) => ({ style: 'padding: 0.25rem 0.5rem; font-size: 0.8rem; text-align:right;', class: 'cursor-pointer hover:bg-gray-50 hidden sm:table-cell' })
-                    },
-                    {
-                        name: '24h Vol',
-                        width: '11%',
-                        formatter: cell => gridjs.html(`<div class="text-right text-blue-700">$${formatNumber(cell, 0)}</div>`),
-                        attributes: (cell) => ({ style: 'padding: 0.25rem 0.5rem; font-size: 0.8rem; text-align:right;', class: 'cursor-pointer hover:bg-gray-50' })
-                    },
-                    {
-                        name: 'Participation',
-                        width: '10%',
-                        formatter: cell => {
-                            const val = Number(cell);
-                            return gridjs.html(`<div class="text-right text-purple-700">${isNaN(val) ? '-' : formatRate(val, 2) + '%'}</div>`);
-                        },
-                        attributes: (cell) => ({ style: 'padding: 0.25rem 0.5rem; font-size: 0.8rem; text-align:right;', class: 'cursor-pointer hover:bg-gray-50' })
-                    },
-                    {
-                        name: 'OI ($)',
-                        width: '10%',
-                        formatter: cell => gridjs.html(`<div class="text-right">$${formatNumber(cell, 0)}</div>`),
-                        attributes: (cell) => ({ style: 'padding: 0.25rem 0.5rem; font-size: 0.8rem; text-align:right;', class: 'cursor-pointer hover:bg-gray-50' })
-                    },
-                    {
-                        name: 'Net Skew',
-                        width: '10%',
-                        formatter: cell => {
-                            const isPositive = cell >= 0;
-                            return gridjs.html(`<div class="text-right ${isPositive ? 'text-green-600' : 'text-red-600'}">${formatNumber(cell, 0)}</div>`);
-                        },
-                        attributes: (cell) => ({ style: 'padding: 0.25rem 0.5rem; font-size: 0.8rem; text-align:right;', class: 'cursor-pointer hover:bg-gray-50' })
-                    },
-                    {
-                        name: 'Turnover',
-                        width: '10%',
-                        formatter: cell => gridjs.html(`<div class="text-right">${formatRate(cell, 2)}x</div>`),
-                        attributes: (cell) => ({ style: 'padding: 0.25rem 0.5rem; font-size: 0.8rem; text-align:right;', class: 'cursor-pointer hover:bg-gray-50' })
-                    },
-                    {
-                        name: 'Daily Funding',
-                        width: '12%',
-                        formatter: cell => {
-                            const isPositive = cell >= 0;
-                            return gridjs.html(`<div class="text-right ${isPositive ? 'text-green-600' : 'text-red-600'}">$${formatNumber(cell, 2)}</div>`);
-                        },
-                        attributes: (cell) => ({ style: 'padding: 0.25rem 0.5rem; font-size: 0.8rem; text-align:right;', class: 'cursor-pointer hover:bg-gray-50' })
                     }
                 ];
+
+                if (tableType === 'all') {
+                    return [
+                        ...baseColumns,
+                        {
+                            name: 'Long OI',
+                            width: '11%',
+                            formatter: cell => gridjs.html(`<div class="text-right">${formatNumber(cell)}</div>`),
+                            attributes: (cell) => ({ style: 'padding: 0.25rem 0.5rem; font-size: 0.8rem; text-align:right;', class: 'cursor-pointer hover:bg-gray-50 hidden sm:table-cell' })
+                        },
+                        {
+                            name: 'Short OI',
+                            width: '11%',
+                            formatter: cell => gridjs.html(`<div class="text-right">${formatNumber(cell)}</div>`),
+                            attributes: (cell) => ({ style: 'padding: 0.25rem 0.5rem; font-size: 0.8rem; text-align:right;', class: 'cursor-pointer hover:bg-gray-50 hidden sm:table-cell' })
+                        },
+                        {
+                            name: '24h Vol',
+                            width: '11%',
+                            formatter: cell => gridjs.html(`<div class="text-right text-blue-700">$${formatNumber(cell, 0)}</div>`),
+                            attributes: (cell) => ({ style: 'padding: 0.25rem 0.5rem; font-size: 0.8rem; text-align:right;', class: 'cursor-pointer hover:bg-gray-50' })
+                        },
+                        {
+                            name: 'Participation',
+                            width: '10%',
+                            formatter: cell => {
+                                const val = Number(cell);
+                                return gridjs.html(`<div class="text-right text-purple-700">${isNaN(val) ? '-' : formatRate(val, 2) + '%'}</div>`);
+                            },
+                            attributes: (cell) => ({ style: 'padding: 0.25rem 0.5rem; font-size: 0.8rem; text-align:right;', class: 'cursor-pointer hover:bg-gray-50' })
+                        },
+                        {
+                            name: 'OI ($)',
+                            width: '10%',
+                            formatter: cell => gridjs.html(`<div class="text-right">$${formatNumber(cell, 0)}</div>`),
+                            attributes: (cell) => ({ style: 'padding: 0.25rem 0.5rem; font-size: 0.8rem; text-align:right;', class: 'cursor-pointer hover:bg-gray-50' })
+                        },
+                        {
+                            name: 'Net Skew',
+                            width: '10%',
+                            formatter: cell => {
+                                const isPositive = cell >= 0;
+                                return gridjs.html(`<div class="text-right ${isPositive ? 'text-green-600' : 'text-red-600'}">${formatNumber(cell, 0)}</div>`);
+                            },
+                            attributes: (cell) => ({ style: 'padding: 0.25rem 0.5rem; font-size: 0.8rem; text-align:right;', class: 'cursor-pointer hover:bg-gray-50' })
+                        },
+                        {
+                            name: 'Turnover',
+                            width: '10%',
+                            formatter: cell => gridjs.html(`<div class="text-right">${formatRate(cell, 2)}x</div>`),
+                            attributes: (cell) => ({ style: 'padding: 0.25rem 0.5rem; font-size: 0.8rem; text-align:right;', class: 'cursor-pointer hover:bg-gray-50' })
+                        },
+                        {
+                            name: 'Daily Funding',
+                            width: '12%',
+                            formatter: cell => {
+                                const isPositive = cell >= 0;
+                                return gridjs.html(`<div class="text-right ${isPositive ? 'text-green-600' : 'text-red-600'}">$${formatNumber(cell, 2)}</div>`);
+                            },
+                            attributes: (cell) => ({ style: 'padding: 0.25rem 0.5rem; font-size: 0.8rem; text-align:right;', class: 'cursor-pointer hover:bg-gray-50' })
+                        }
+                    ];
+                }
+                
+                return baseColumns;
             }
             function renderTables() {
                 const simulate = simulationMode;
@@ -395,10 +403,8 @@ volume24H,
                 if (lowRatesGrid) lowRatesGrid.destroy();
                 if (allMarketsGrid) allMarketsGrid.destroy();
 
-                const columns = getColumns(simulate);
-
                 highRatesGrid = new gridjs.Grid({
-                    columns: columns.map(col => ({
+                    columns: getColumns(simulate, 'top5').map(col => ({
                         ...col,
                         sort: false,
                         sort: undefined
@@ -437,7 +443,7 @@ volume24H,
                 }).render(document.getElementById('highRatesTable'));
 
                 lowRatesGrid = new gridjs.Grid({
-                    columns: columns.map(col => ({
+                    columns: getColumns(simulate, 'top5').map(col => ({
                         ...col,
                         sort: false,
                         sort: undefined
@@ -476,7 +482,7 @@ volume24H,
                 }).render(document.getElementById('lowRatesTable'));
 
                 allMarketsGrid = new gridjs.Grid({
-                    columns: columns.map((col, index) => {
+                    columns: getColumns(simulate, 'all').map((col, index) => {
                         const column = { ...col };
                         column.sort = {
                             multiColumn: false,
