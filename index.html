@@ -35,6 +35,7 @@
 </head>
 <body class="bg-gray-100 min-h-screen p-2 md:p-8">
     <div class="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
         <header class="mb-8 md:mb-10 lg:mb-12 px-0 w-full">
             <!-- Row 1: Headline left, Controls right -->
             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between w-full gap-2 sm:gap-3">
@@ -89,7 +90,10 @@
             </div>
         </header>
 
+
+
         <main class="space-y-6 lg:space-y-8">
+        <!-- OI Summary Boxes -->
             <section>
                 <h2 class="text-lg font-semibold text-gray-700 mb-2">Top 5 Highest Funding Rates</h2>
                 <div id="highRatesTable"></div>
@@ -98,6 +102,17 @@
                 <h2 class="text-lg font-semibold text-gray-700 mb-2">Top 5 Lowest Funding Rates</h2>
                 <div id="lowRatesTable"></div>
             </section>
+            <h2 class="text-lg font-semibold text-gray-700 mb-2">Total Long and Short OI</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div class="bg-white p-4 rounded-lg shadow border border-gray-200">
+                    <div class="text-sm font-medium text-gray-500">Total Long OI</div>
+                    <div id="totalLongOI" class="text-2xl font-semibold text-green-600">$0.00</div>
+                </div>
+                <div class="bg-white p-4 rounded-lg shadow border border-gray-200">
+                    <div class="text-sm font-medium text-gray-500">Total Short OI</div>
+                    <div id="totalShortOI" class="text-2xl font-semibold text-red-600">$0.00</div>
+                </div>
+            </div>            
             <section>
                 <h2 class="text-lg font-semibold text-gray-700 mb-2">All Markets</h2>
                 <div id="allMarketsTable"></div>
@@ -183,11 +198,31 @@
                     if (!response.ok) throw new Error('API error');
                     const data = await response.json();
                     let all = Array.isArray(data.data) ? data.data : data;
-                    all = all.map(m => ({
-                        ...m,
-                        fundingDay: (m.fundingRateAnnualized || 0) / 365,
-                        fundingHour: (m.fundingRateAnnualized || 0) / 365 / 24
-                    }));
+                    
+                    // Calculate total OI values
+                    let totalLongOI = 0;
+                    let totalShortOI = 0;
+                    
+                    all = all.map(m => {
+                        const longOIValue = (m.markPrice || 0) * (m.longOI || 0);
+                        const shortOIValue = (m.markPrice || 0) * (m.shortOI || 0);
+                        
+                        totalLongOI += longOIValue;
+                        totalShortOI += shortOIValue;
+                        
+                        return {
+                            ...m,
+                            fundingDay: (m.fundingRateAnnualized || 0) / 365,
+                            fundingHour: (m.fundingRateAnnualized || 0) / 365 / 24,
+                            longOIValue,
+                            shortOIValue
+                        };
+                    });
+                    
+                    // Update the UI with total OI values
+                    document.getElementById('totalLongOI').textContent = `$${formatNumber(totalLongOI, 0)}`;
+                    document.getElementById('totalShortOI').textContent = `$${formatNumber(totalShortOI, 0)}`;
+                    
                     cachedData = all;
                     renderTables();
                     updateLastUpdated();
