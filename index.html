@@ -250,13 +250,13 @@
                         name: 'Long OI',
                         width: '22%',
                         formatter: cell => gridjs.html(`<div class="text-right">${formatNumber(cell)}</div>`),
-                        attributes: (cell) => ({ style: 'padding: 0.25rem 0.5rem; font-size: 0.8rem; text-align:right;', class: 'cursor-pointer hover:bg-gray-50' })
+                        attributes: (cell) => ({ style: 'padding: 0.25rem 0.5rem; font-size: 0.8rem; text-align:right;', class: 'cursor-pointer hover:bg-gray-50 hidden sm:table-cell' })
                     },
                     {
                         name: 'Short OI',
                         width: '22%',
                         formatter: cell => gridjs.html(`<div class="text-right">${formatNumber(cell)}</div>`),
-                        attributes: (cell) => ({ style: 'padding: 0.25rem 0.5rem; font-size: 0.8rem; text-align:right;', class: 'cursor-pointer hover:bg-gray-50' })
+                        attributes: (cell) => ({ style: 'padding: 0.25rem 0.5rem; font-size: 0.8rem; text-align:right;', class: 'cursor-pointer hover:bg-gray-50 hidden sm:table-cell' })
                     }
                 ];
             }
