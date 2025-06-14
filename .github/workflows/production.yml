@@ -11,7 +11,7 @@ jobs:
     timeout-minutes: 10
     env:
       AWS_S3_BUCKET_PROD: ${{ secrets.AWS_S3_BUCKET_PROD }}
-      AWS_CLOUDFRONT_DISTRIBUTION_ID: EG8O773S9SOS7
+      AWS_CLOUDFRONT_DISTRIBUTION_ID: E3DKH438IVMXVO
       
     steps:
       - name: Checkout repository
