@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reya Funding Rates</title>
+    <script src="https://unpkg.com/gridjs/dist/gridjs.umd.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    <link href="https://unpkg.com/gridjs/dist/theme/mermaid.min.css" rel="stylesheet" />
+    <style>
+        .loading { display: none; }
+        .loading.active { display: inline-block; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .conn-dot { height: 0.9em; width: 0.9em; border-radius: 50%; display: inline-block; margin-right: .4em; }
+        .conn-dot.green { background: #22c55e; }
+        .conn-dot.red { background: #ef4444; }
+        .conn-dot.yellow { background: #f59e42; }
+        .gridjs-table { width: 100% !important; }
+        .gridjs-wrapper { border-radius: 0 !important; }
+        @media (max-width: 639px) {
+            body { font-size: 12px; padding: 0.25rem; }
+            h1 { font-size: 1.25rem; }
+            h2 { font-size: 1rem; }
+        }
+        @media (min-width: 1024px) {
+            body { font-size: 16px; padding: 1.5rem; }
+            h1 { font-size: 2.25rem !important; margin-bottom: 1.5rem !important; font-weight: 700 !important; }
+            h2 { font-size: 1.5rem !important; margin: 2rem 0 1.25rem !important; font-weight: 600 !important; }
+            #lastUpdated { font-size: 0.9rem !important; margin-bottom: 1rem !important; }
+            .container { max-width: 1400px !important; margin: 0 auto !important; padding: 0 2rem !important; }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen p-2 md:p-8">
+    <div class="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <header class="mb-8 md:mb-10 lg:mb-12 px-0 w-full">
+            <!-- Row 1: Headline left, Controls right -->
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between w-full gap-2 sm:gap-3">
+              <!-- Left: Headline -->
+              <h1 class="text-2xl sm:text-3xl font-extrabold text-gray-800 mb-2 sm:mb-0">Reya Funding Rates</h1>
+              
+              <!-- Right: Button Group -->
+              <div class="grid grid-cols-2 sm:flex sm:flex-row gap-2 w-full sm:w-auto">
+
+
+                <!-- Follow on X Button -->
+                <a href="https://x.com/0xCK1" target="_blank" rel="noopener noreferrer"
+                   class="inline-flex items-center justify-center h-10 sm:h-12 w-full sm:min-w-[140px] px-3 sm:px-4 py-2 rounded-lg sm:rounded-xl text-sm sm:text-base font-medium sm:font-semibold border border-gray-300 text-blue-700 bg-white hover:bg-blue-50 transition focus:outline-none focus:ring-2 focus:ring-blue-500 whitespace-nowrap">
+                  <i class="fa-brands fa-x-twitter text-lg sm:text-xl"></i>
+                  <span class="ml-1.5 sm:ml-2">Follow @0xCK1</span>
+                </a>
+                
+                <!-- Trade on REYA -->
+                <a href="https://app.reya.xyz/?referredBy=q4d4ln7o" target="_blank" rel="noopener noreferrer"
+                class="inline-flex items-center justify-center h-10 sm:h-12 w-full sm:min-w-[150px] px-3 sm:px-4 py-2 rounded-lg sm:rounded-xl text-sm sm:text-base font-medium sm:font-semibold border border-gray-300 bg-white text-gray-800 hover:bg-gray-100 transition focus:outline-none focus:ring-2 focus:ring-blue-500 whitespace-nowrap">
+                <i class="fa-solid fa-arrow-up-right-from-square text-lg sm:text-xl"></i>
+                  <span class="ml-1.5 sm:ml-2">Trade on REYA</span>
+                </a>
+
+
+                <!-- Simulation Toggle Button -->
+                <button type="button" id="simulateBtn"
+                  class="inline-flex items-center justify-center h-10 sm:h-12 w-full sm:min-w-[150px] px-3 sm:px-4 py-2 rounded-lg sm:rounded-xl text-sm sm:text-base font-medium sm:font-semibold border border-gray-300 bg-white text-gray-800 hover:bg-gray-100 transition focus:outline-none focus:ring-2 focus:ring-blue-500 whitespace-nowrap">
+                  <span id="simPercentIcon" class="text-blue-600 mr-1"><i class="fa-solid fa-percent text-sm sm:text-base"></i></span>
+                  <span id="simDollarIcon" class="text-gray-400 mr-1 sm:mr-2"><i class="fa-solid fa-dollar-sign text-sm sm:text-base"></i></span>
+                  <span>Simulate $10K</span>
+                </button>
+
+                <!-- Auto-Refresh Button Toggle -->
+                <button type="button" id="autoRefreshBtn"
+                  class="col-span-2 sm:col-auto inline-flex items-center justify-center h-10 sm:h-12 w-full sm:min-w-[140px] px-3 sm:px-4 py-2 rounded-lg sm:rounded-xl text-sm sm:text-base font-medium sm:font-semibold border border-gray-300 bg-white text-gray-800 hover:bg-gray-100 transition focus:outline-none focus:ring-2 focus:ring-blue-500 whitespace-nowrap">
+                  <i class="fa-solid fa-arrows-rotate text-base sm:text-lg"></i>
+                  <span class="ml-1.5 sm:ml-2">Auto Refresh</span>
+                  <span id="autoRefresh" class="ml-1 text-gray-500 text-xs sm:text-sm"></span>
+                </button>
+              </div>
+            </div>
+            <!-- Row 2: Connection + Last Updated -->
+            <div class="flex justify-end mt-3">
+              <div class="flex flex-col items-end">
+                <div id="connStatus" class="flex items-center">
+                  <span class="conn-dot yellow mr-2" id="connDot"></span>
+                  <span id="connMsg" class="text-sm text-gray-500">Connecting...</span>
+                </div>
+                <div id="lastUpdated" class="text-sm text-gray-500 mt-1"></div>
+              </div>
+            </div>
+        </header>
+
+        <main class="space-y-6 lg:space-y-8">
+            <section>
+                <h2 class="text-lg font-semibold text-gray-700 mb-2">Top 5 Highest Funding Rates</h2>
+                <div id="highRatesTable"></div>
+            </section>
+            <section>
+                <h2 class="text-lg font-semibold text-gray-700 mb-2">Top 5 Lowest Funding Rates</h2>
+                <div id="lowRatesTable"></div>
+            </section>
+            <section>
+                <h2 class="text-lg font-semibold text-gray-700 mb-2">All Markets</h2>
+                <div id="allMarketsTable"></div>
+            </section>
+        </main>
+    </div>
+    <script>
+        (() => {
+            const autoRefreshBtn = document.getElementById('autoRefreshBtn');
+            const autoRefreshEl = document.getElementById('autoRefresh');
+            const simulateBtn = document.getElementById('simulateBtn');
+            const simPercentIcon = document.getElementById('simPercentIcon');
+            const simDollarIcon = document.getElementById('simDollarIcon');
+            const lastUpdatedEl = document.getElementById('lastUpdated');
+            const connDot = document.getElementById('connDot');
+            const connMsg = document.getElementById('connMsg');
+            let autoRefreshEnabled = false;
+            let simulationMode = false;
+
+            let highRatesGrid, lowRatesGrid, allMarketsGrid;
+            let autoTimer = null, countdown = 60, countdownTimer = null;
+            let cachedData = null;
+
+            // Formatters
+            const formatNumber = (num) => new Intl.NumberFormat('en-US').format(num);
+            const formatRate = (rate, digits = 2) => Number(rate).toLocaleString(undefined, {minimumFractionDigits: digits, maximumFractionDigits: digits});
+            const formatUsd = (usd, digits = 2) => (usd >= 0 ? "$" : "-$") + Math.abs(usd).toLocaleString(undefined, {minimumFractionDigits: digits, maximumFractionDigits: digits});
+            const updateLastUpdated = () => {
+                const now = new Date();
+                lastUpdatedEl.textContent = `Last updated: ${now.toLocaleString()}`;
+            };
+            // Connection status indicator
+            function setConn(status) {
+                connDot.className = 'conn-dot ' + (status === 'ok' ? 'green' : status === 'fail' ? 'red' : 'yellow');
+                connMsg.textContent = status === 'ok' ? 'Connected' : status === 'fail' ? 'Error' : 'Connecting...';
+            }
+            // Auto refresh controls
+            function startAutoRefresh() {
+                if (!autoRefreshEnabled) return;
+                clearAutoRefresh();
+                countdown = 60;
+                updateAutoRefreshText();
+                countdownTimer = setInterval(() => {
+                    countdown--;
+                    if (countdown <= 0) {
+                        countdown = 60;
+                        fetchAndRender();
+                    }
+                    updateAutoRefreshText();
+                }, 1000);
+                autoTimer = setTimeout(() => {
+                    clearInterval(countdownTimer);
+                    fetchAndRender().then(() => {
+                        if (autoRefreshEnabled) {
+                            startAutoRefresh();
+                        }
+                    });
+                }, 60000);
+            }
+            function updateAutoRefreshText() {
+                if (!autoRefreshEl) return;
+                if (autoRefreshEnabled) {
+                    autoRefreshEl.textContent = `(${countdown}s)`;
+                    autoRefreshBtn.classList.remove('bg-white','text-gray-800','border-gray-300');
+                    autoRefreshBtn.classList.add('bg-blue-50','border-blue-400','text-blue-700');
+                } else {
+                    autoRefreshEl.textContent = '';
+                    autoRefreshBtn.classList.remove('bg-blue-50','border-blue-400','text-blue-700');
+                    autoRefreshBtn.classList.add('bg-white','text-gray-800','border-gray-300');
+                }
+            }
+            function clearAutoRefresh() {
+                if (autoTimer) clearTimeout(autoTimer);
+                if (countdownTimer) clearInterval(countdownTimer);
+                autoTimer = null; countdownTimer = null;
+            }
+            // Core data fetch/render
+            async function fetchAndRender() {
+                setConn('loading');
+                try {
+                    // The ONLY change: add a cache buster query param!
+                    const response = await fetch('https://api.reya.xyz/api/markets?ts=' + Date.now());
+                    if (!response.ok) throw new Error('API error');
+                    const data = await response.json();
+                    let all = Array.isArray(data.data) ? data.data : data;
+                    all = all.map(m => ({
+                        ...m,
+                        fundingDay: (m.fundingRateAnnualized || 0) / 365,
+                        fundingHour: (m.fundingRateAnnualized || 0) / 365 / 24
+                    }));
+                    cachedData = all;
+                    renderTables();
+                    updateLastUpdated();
+                    setConn('ok');
+                } catch (err) {
+                    setConn('fail');
+                    document.getElementById('highRatesTable').innerHTML = `<div class="p-4 text-center text-red-500">Error loading data. Please try again.</div>`;
+                    document.getElementById('lowRatesTable').innerHTML = '';
+                    document.getElementById('allMarketsTable').innerHTML = '';
+                }
+            }
+            function getColumns(simulate) {
+                // Helper function to format cell with color based on value sign
+                const formatCell = (value, digits, isDollar = false) => {
+                    const isPositive = value >= 0;
+                    const formattedValue = isDollar ? 
+                        formatUsd(value, digits) : 
+                        formatRate(value, digits) + (isDollar ? '' : '%');
+                    
+                    return gridjs.html(`<div class="text-right ${isPositive ? 'text-green-600' : 'text-red-600'}">${formattedValue}</div>`);
+                };
+
+                return [
+                    { 
+                        name: 'Ticker', 
+                        width: '14%',
+                        attributes: (cell) => ({ 
+                            style: 'padding: 0.25rem 0.5rem; font-size: 0.8rem;', 
+                            class: 'cursor-pointer hover:bg-gray-50' 
+                        })
+                    },
+                    {
+                        name: simulate ? 'Year [$]' : 'Year [%]',
+                        width: '14%',
+                        formatter: cell => formatCell(cell, 2, simulate),
+                        attributes: (cell) => ({ 
+                            style: 'padding: 0.25rem 0.5rem; font-size: 0.8rem; text-align:right;',
+                            class: 'cursor-pointer hover:bg-gray-50'
+                        })
+                    },
+                    {
+                        name: simulate ? 'Day [$]' : 'Day [%]',
+                        width: '14%',
+                        formatter: cell => formatCell(cell, 4, simulate),
+                        attributes: (cell) => ({ 
+                            style: 'padding: 0.25rem 0.5rem; font-size: 0.8rem; text-align:right;',
+                            class: 'cursor-pointer hover:bg-gray-50'
+                        })
+                    },
+                    {
+                        name: simulate ? 'Hour [$]' : 'Hour [%]',
+                        width: '14%',
+                        formatter: cell => formatCell(cell, 6, simulate),
+                        attributes: (cell) => ({ 
+                            style: 'padding: 0.25rem 0.5rem; font-size: 0.8rem; text-align:right;',
+                            class: 'cursor-pointer hover:bg-gray-50'
+                        })
+                    },
+                    {
+                        name: 'Long OI',
+                        width: '22%',
+                        formatter: cell => gridjs.html(`<div class="text-right">${formatNumber(cell)}</div>`),
+                        attributes: (cell) => ({ style: 'padding: 0.25rem 0.5rem; font-size: 0.8rem; text-align:right;', class: 'cursor-pointer hover:bg-gray-50' })
+                    },
+                    {
+                        name: 'Short OI',
+                        width: '22%',
+                        formatter: cell => gridjs.html(`<div class="text-right">${formatNumber(cell)}</div>`),
+                        attributes: (cell) => ({ style: 'padding: 0.25rem 0.5rem; font-size: 0.8rem; text-align:right;', class: 'cursor-pointer hover:bg-gray-50' })
+                    }
+                ];
+            }
+            function renderTables() {
+                const simulate = simulationMode;
+                const notional = 10000;
+                let all = cachedData.map(m => ({
+                    ...m,
+                    simFundingRateAnnualized: (m.fundingRateAnnualized || 0) * notional / 100,
+                    simFundingDay: (m.fundingDay || 0) * notional / 100,
+                    simFundingHour: (m.fundingHour || 0) * notional / 100
+                }));
+                const sorted = [...all].sort((a, b) => (b.fundingRateAnnualized || 0) - (a.fundingRateAnnualized || 0));
+                const top5High = sorted.slice(0, 5);
+                const top5Low = sorted.slice(-5).reverse();
+
+                function formatGridData(markets) {
+                    return markets.map(market => {
+                        const ticker = (market.ticker || '').replace('-rUSD', '');
+                        const yearValue = simulate ? market.simFundingRateAnnualized : market.fundingRateAnnualized;
+                        const dayValue = simulate ? market.simFundingDay : market.fundingDay;
+                        const hourValue = simulate ? market.simFundingHour : market.fundingHour;
+                        
+                        return [
+                            ticker,
+                            yearValue,
+                            dayValue,
+                            hourValue,
+                            parseInt(market.longOI || 0),
+                            parseInt(market.shortOI || 0)
+                        ];
+                    });
+                }
+
+                if (highRatesGrid) highRatesGrid.destroy();
+                if (lowRatesGrid) lowRatesGrid.destroy();
+                if (allMarketsGrid) allMarketsGrid.destroy();
+
+                const columns = getColumns(simulate);
+
+                highRatesGrid = new gridjs.Grid({
+                    columns: columns.map(col => ({
+                        ...col,
+                        sort: false,
+                        // Keep formatters but remove sort config for top/bottom tables
+                        sort: undefined
+                    })),
+                    data: formatGridData(top5High),
+                    className: { 
+                        container: 'w-full',
+                            table: 'w-full',
+                            th: 'bg-gray-50 text-gray-500 text-xs font-medium uppercase tracking-wider',
+                            td: 'py-0',
+                    },
+                    style: {
+                            table: {
+                                'white-space': 'nowrap',
+                                'border-collapse': 'collapse'
+                            },
+                            th: {
+                                'padding': '0.5rem',
+                                'font-size': '0.7rem',
+                                'font-weight': '500',
+                                'text-transform': 'uppercase',
+                                'letter-spacing': '0.05em',
+                                'border-bottom': '1px solid #e5e7eb'
+                            },
+                            td: {
+                                'padding': '0.25rem 0.5rem',
+                                'font-size': '0.75rem',
+                                'border-bottom': '1px solid #f3f4f6'
+                            }
+                        },
+                        height: 'auto',
+                        fixedHeader: true,
+                        sort: false,
+                        search: false,
+                        pagination: false
+                }).render(document.getElementById('highRatesTable'));
+
+                lowRatesGrid = new gridjs.Grid({
+                    columns: columns.map(col => ({
+                        ...col,
+                        sort: false,
+                        // Keep formatters but remove sort config for top/bottom tables
+                        sort: undefined
+                    })),
+                    data: formatGridData(top5Low),
+                    className: { 
+                        container: 'w-full',
+                            table: 'w-full',
+                            th: 'bg-gray-50 text-gray-500 text-xs font-medium uppercase tracking-wider',
+                            td: 'py-0',
+                    },
+                    style: {
+                            table: {
+                                'white-space': 'nowrap',
+                                'border-collapse': 'collapse'
+                            },
+                            th: {
+                                'padding': '0.5rem',
+                                'font-size': '0.7rem',
+                                'font-weight': '500',
+                                'text-transform': 'uppercase',
+                                'letter-spacing': '0.05em',
+                                'border-bottom': '1px solid #e5e7eb'
+                            },
+                            td: {
+                                'padding': '0.25rem 0.5rem',
+                                'font-size': '0.75rem',
+                                'border-bottom': '1px solid #f3f4f6'
+                            }
+                        },
+                        height: 'auto',
+                        fixedHeader: true,
+                        sort: false,
+                        search: false,
+                        pagination: false
+                }).render(document.getElementById('lowRatesTable'));
+
+                allMarketsGrid = new gridjs.Grid({
+                    columns: columns.map((col, index) => {
+                        const column = { ...col };
+                        
+                        // Set up sorting for all columns
+                        column.sort = {
+                            multiColumn: false,
+                            sortFunc: (a, b, order) => {
+                                // For ticker column (index 0)
+                                if (index === 0) {
+                                    const aVal = String(a || '').toLowerCase();
+                                    const bVal = String(b || '').toLowerCase();
+                                    return order === 'asc' 
+                                        ? aVal.localeCompare(bVal)
+                                        : bVal.localeCompare(aVal);
+                                } 
+                                // For all numeric columns (indices 1-5)
+                                else {
+                                    const aVal = Number(a) || 0;
+                                    const bVal = Number(b) || 0;
+                                    return order === 'asc' ? aVal - bVal : bVal - aVal;
+                                }
+                            }
+                        };
+                        
+                        return column;
+                    }),
+                    data: formatGridData(all),
+                    className: {
+                            container: 'w-full',
+                            table: 'w-full',
+                            th: 'bg-gray-50 text-gray-500 text-xs font-medium uppercase tracking-wider',
+                            td: 'py-0',
+                            search: 'w-full p-2 mb-2 border rounded text-xs',
+                            sort: 'ml-1',
+                            sortButton: 'w-full text-left',
+                            sortButtonUp: 'text-gray-400 hover:text-gray-600',
+                            sortButtonDown: 'text-gray-400 hover:text-gray-600',
+                            sortButtonNone: 'text-gray-300 hover:text-gray-400',
+                            loading: 'p-4 text-center text-gray-500',
+                            notfound: 'p-4 text-center text-gray-500',
+                        },
+                    style: {
+                            table: {
+                                'white-space': 'nowrap',
+                                'border-collapse': 'collapse',
+                                'table-layout': 'fixed',
+                                'width': '100%',
+                                'margin': '0 auto'
+                            },
+                            th: {
+                                'padding': '0.5rem',
+                                'font-size': '0.7rem',
+                                'font-weight': '500',
+                                'text-transform': 'uppercase',
+                                'letter-spacing': '0.05em',
+                                'border-bottom': '1px solid #e5e7eb',
+                                'position': 'sticky',
+                                'top': 0,
+                                'background': '#f9fafb',
+                                'z-index': 1,
+                                'overflow': 'hidden',
+                                'text-overflow': 'ellipsis',
+                                'white-space': 'nowrap'
+                            },
+                            td: {
+                                'padding': '0.25rem 0.5rem',
+                                'font-size': '0.75rem',
+                                'border-bottom': '1px solid #f3f4f6',
+                                'overflow': 'hidden',
+                                'text-overflow': 'ellipsis',
+                                'white-space': 'nowrap'
+                            },
+                            'input[type="search"]': {
+                                'font-size': '0.75rem',
+                                'padding': '0.25rem 0.5rem',
+                                'height': 'auto'
+                            }
+                        },
+                        language: {
+                            search: {
+                                placeholder: 'Search Ticker...',
+                            },
+                            sort: {
+                                ascending: '▲',
+                                descending: '▼',
+                                clear: 'Clear sort'
+                            },
+                            notfound: 'No records found',
+                            loading: 'Loading...'
+                        },                        
+                    sort: true, 
+                    search: true, 
+                    pagination: false, 
+                    height: 'auto', 
+                    fixedHeader: true
+                }).render(document.getElementById('allMarketsTable'));
+            }
+            // Simulation button toggle
+            function updateSimIcons() {
+                if (simulationMode) {
+                    simDollarIcon.classList.add('text-blue-600');
+                    simDollarIcon.classList.remove('text-gray-400');
+                    simPercentIcon.classList.add('text-gray-400');
+                    simPercentIcon.classList.remove('text-blue-600');
+                    simulateBtn.classList.add('border-blue-400','bg-blue-50','text-blue-700');
+                    simulateBtn.classList.remove('border-gray-300','bg-white','text-gray-800');
+                } else {
+                    simPercentIcon.classList.add('text-blue-600');
+                    simPercentIcon.classList.remove('text-gray-400');
+                    simDollarIcon.classList.add('text-gray-400');
+                    simDollarIcon.classList.remove('text-blue-600');
+                    simulateBtn.classList.remove('border-blue-400','bg-blue-50','text-blue-700');
+                    simulateBtn.classList.add('border-gray-300','bg-white','text-gray-800');
+                }
+            }
+            simulateBtn.addEventListener('click', () => {
+                simulationMode = !simulationMode;
+                updateSimIcons();
+                if (cachedData) renderTables();
+            });
+            updateSimIcons();
+
+            // Auto-refresh button toggle
+            autoRefreshBtn.addEventListener('click', () => {
+                autoRefreshEnabled = !autoRefreshEnabled;
+                if (autoRefreshEnabled) {
+                    startAutoRefresh();
+                } else {
+                    clearAutoRefresh();
+                    updateAutoRefreshText();
+                }
+            });
+
+            // Clean up on page unload
+            window.addEventListener('beforeunload', () => { clearAutoRefresh(); });
+
+            // Tab visibility change
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'visible' && autoRefreshEnabled) {
+                    startAutoRefresh();
+                } else {
+                    clearAutoRefresh();
+                }
+            });
+
+            // Initial load
+            fetchAndRender();
+            updateAutoRefreshText();
+        })();
+    </script>
+</body>
+</html>
