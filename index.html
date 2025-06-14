@@ -348,9 +348,9 @@
                 const simulate = simulationMode;
                 const notional = 10000;
                 let all = cachedData.map(m => {
-                    const availableLong = m.availableLong || 0;
-                    const availableShort = m.availableShort || 0;
-                    const denom = availableLong + availableShort;
+                    const availableLongUSD = (m.availableLong || 0) * (m.markPrice || 1);
+                    const availableShortUSD = (m.availableShort || 0) * (m.markPrice || 1);
+                    const denom = availableLongUSD + availableShortUSD;
                     const participation = denom > 0 ? ((m.volume24H || 0) / denom) * 100 : null;
                     return {
                         ...m,
