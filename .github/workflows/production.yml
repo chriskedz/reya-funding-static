@@ -1,67 +1,41 @@
-name: Deploy to Production
+name: Deploy to S3
 
 on:
   push:
     branches: [main]
   workflow_dispatch:
 
-# Control concurrent deployments
-concurrency:
-  group: production-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 15  # Prevent long-running deployments
-    env:
-      AWS_S3_BUCKET_PROD: ${{ secrets.AWS_S3_BUCKET_PROD }}
-      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      AWS_REGION: "eu-central-1"
-      SOURCE_DIR: "dist"
-      AWS_CLOUDFRONT_DISTRIBUTION_ID: "E3DKH438IVMXVO"
-
+    timeout-minutes: 10
+    
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # Full git history for better versioning
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20" # Updated to latest LTS version
-
-      - name: Cache Node.js modules
-        uses: actions/cache@v4
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
-
-      - name: Install dependencies
-        run: npm ci
         
-      - name: List files (for debugging)
-        run: ls -la
-        
-      - name: Upload build artifacts on failure
-        uses: actions/upload-artifact@v4
-        if: failure()
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          name: build-artifacts
-          path: .
-          retention-days: 3
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-central-1
           
+      - name: Upload to S3
+        run: |
+          aws s3 cp index.html s3://${{ secrets.AWS_S3_BUCKET_PROD }}/index.html \
+            --acl public-read \
+            --cache-control "max-age=0, no-cache"
+            
+      - name: Invalidate CloudFront cache
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id E3DKH438IVMXVO \
+            --paths "/*"
+            
       - name: Set deployment timestamp
         id: deployment-timestamp
         run: echo "timestamp=$(date +'%Y-%m-%d %H:%M:%S')" >> $GITHUB_OUTPUT
-
-      # S3 deployments: Static files with long cache, HTML with short cache
-      - name: Sync static files to S3 bucket (long cache)
-        run: |
           aws s3 sync ${SOURCE_DIR:-.} s3://${AWS_S3_BUCKET_PROD}/ \
             --no-progress --delete \
             --cache-control "max-age=31536000,public" \
