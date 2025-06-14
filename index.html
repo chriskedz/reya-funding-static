@@ -97,8 +97,8 @@
                     <div id="totalVolume24H" class="text-2xl font-semibold text-blue-700">$0.00</div>
                 </div>
                 <div class="bg-white p-4 rounded-lg shadow border border-gray-200">
-                    <div class="text-sm font-medium text-gray-500">Average Participation Rate</div>
-                    <div id="avgParticipationRate" class="text-2xl font-semibold text-purple-700">0.00%</div>
+                    <div class="text-sm font-medium text-gray-500">Total OI ($)</div>
+                    <div id="totalOI" class="text-2xl font-semibold text-purple-700">$0.00</div>
                 </div>                
                 <div class="bg-white p-4 rounded-lg shadow border border-gray-200">
                     <div class="text-sm font-medium text-gray-500">Total Long OI</div>
@@ -198,8 +198,7 @@
                     let totalLongOI = 0;
                     let totalShortOI = 0;
                     let totalVolume24H = 0;
-                    let participationSum = 0;
-                    let participationCount = 0;
+                    let totalOI = 0;
 
                     all = all.map(m => {
                         const longOIValue = (m.markPrice || 0) * (m.longOI || 0);
@@ -207,14 +206,7 @@
                         totalLongOI += longOIValue;
                         totalShortOI += shortOIValue;
                         totalVolume24H += (m.volume24H || 0);
-                        const availableLong = m.availableLong || 0;
-                        const availableShort = m.availableShort || 0;
-                        const denom = availableLong + availableShort;
-                        if (denom > 0) {
-                            const partRate = ((m.volume24H || 0) / denom) * 100;
-                            participationSum += partRate;
-                            participationCount += 1;
-                        }
+                        totalOI += longOIValue + shortOIValue;
                         return {
                             ...m,
                             fundingDay: (m.fundingRateAnnualized || 0) / 365,
@@ -227,8 +219,7 @@
                     document.getElementById('totalLongOI').textContent = `$${formatNumber(totalLongOI, 0)}`;
                     document.getElementById('totalShortOI').textContent = `$${formatNumber(totalShortOI, 0)}`;
                     document.getElementById('totalVolume24H').textContent = `$${formatNumber(totalVolume24H, 0)}`;
-                    const avgPartRate = participationCount > 0 ? participationSum / participationCount : 0;
-                    document.getElementById('avgParticipationRate').textContent = `${formatRate(avgPartRate, 2)}%`;
+                    document.getElementById('totalOI').textContent = `$${formatNumber(totalOI, 0)}`;
 
                     cachedData = all;
                     renderTables();
