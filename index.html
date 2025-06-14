@@ -78,11 +78,17 @@
         <main class="space-y-6 lg:space-y-8">
             <section>
                 <h2 class="text-lg font-semibold text-gray-700 mb-2">Top 5 Highest Funding Rates</h2>
-                <div id="highRatesTable"></div>
-            </section>
-            <section>
-                <h2 class="text-lg font-semibold text-gray-700 mb-2">Top 5 Lowest Funding Rates</h2>
-                <div id="lowRatesTable"></div>
+                <div class="overflow-x-auto -mx-4 sm:mx-0">
+                    <div class="min-w-[800px] px-4 sm:min-w-0 sm:px-0">
+                        <div id="highRatesTable"></div>
+                    </div>
+                </div>
+                <h2 class="text-lg font-semibold text-gray-700 mb-2 mt-6">Top 5 Lowest Funding Rates</h2>
+                <div class="overflow-x-auto -mx-4 sm:mx-0">
+                    <div class="min-w-[800px] px-4 sm:min-w-0 sm:px-0">
+                        <div id="lowRatesTable"></div>
+                    </div>
+                </div>
             </section>
             <h2 class="text-lg font-semibold text-gray-700 mb-2">Market Stats</h2>
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
@@ -105,7 +111,11 @@
             </div>
             <section>
                 <h2 class="text-lg font-semibold text-gray-700 mb-2">All Markets</h2>
-                <div id="allMarketsTable"></div>
+                <div class="overflow-x-auto -mx-4 sm:mx-0">
+                    <div class="min-w-[1100px] px-4 sm:min-w-0 sm:px-0">
+                        <div id="allMarketsTable"></div>
+                    </div>
+                </div>
             </section>
         </main>
     </div>
@@ -289,17 +299,47 @@
                         attributes: (cell) => ({ style: 'padding: 0.25rem 0.5rem; font-size: 0.8rem; text-align:right;', class: 'cursor-pointer hover:bg-gray-50 hidden sm:table-cell' })
                     },
                     {
-                        name: '24h Volume',
+                        name: '24h Vol',
                         width: '11%',
-                        formatter: cell => gridjs.html(`<div class="text-right text-blue-700">${formatNumber(cell, 0)}</div>`),
+                        formatter: cell => gridjs.html(`<div class="text-right text-blue-700">$${formatNumber(cell, 0)}</div>`),
                         attributes: (cell) => ({ style: 'padding: 0.25rem 0.5rem; font-size: 0.8rem; text-align:right;', class: 'cursor-pointer hover:bg-gray-50' })
                     },
                     {
-                        name: 'Participation Rate',
-                        width: '13%',
+                        name: 'Participation',
+                        width: '10%',
                         formatter: cell => {
                             const val = Number(cell);
                             return gridjs.html(`<div class="text-right text-purple-700">${isNaN(val) ? '-' : formatRate(val, 2) + '%'}</div>`);
+                        },
+                        attributes: (cell) => ({ style: 'padding: 0.25rem 0.5rem; font-size: 0.8rem; text-align:right;', class: 'cursor-pointer hover:bg-gray-50' })
+                    },
+                    {
+                        name: 'OI ($)',
+                        width: '10%',
+                        formatter: cell => gridjs.html(`<div class="text-right">$${formatNumber(cell, 0)}</div>`),
+                        attributes: (cell) => ({ style: 'padding: 0.25rem 0.5rem; font-size: 0.8rem; text-align:right;', class: 'cursor-pointer hover:bg-gray-50' })
+                    },
+                    {
+                        name: 'Net Skew',
+                        width: '10%',
+                        formatter: cell => {
+                            const isPositive = cell >= 0;
+                            return gridjs.html(`<div class="text-right ${isPositive ? 'text-green-600' : 'text-red-600'}">${formatNumber(cell, 0)}</div>`);
+                        },
+                        attributes: (cell) => ({ style: 'padding: 0.25rem 0.5rem; font-size: 0.8rem; text-align:right;', class: 'cursor-pointer hover:bg-gray-50' })
+                    },
+                    {
+                        name: 'Turnover',
+                        width: '10%',
+                        formatter: cell => gridjs.html(`<div class="text-right">${formatRate(cell, 2)}x</div>`),
+                        attributes: (cell) => ({ style: 'padding: 0.25rem 0.5rem; font-size: 0.8rem; text-align:right;', class: 'cursor-pointer hover:bg-gray-50' })
+                    },
+                    {
+                        name: 'Daily Funding',
+                        width: '12%',
+                        formatter: cell => {
+                            const isPositive = cell >= 0;
+                            return gridjs.html(`<div class="text-right ${isPositive ? 'text-green-600' : 'text-red-600'}">$${formatNumber(cell, 2)}</div>`);
                         },
                         attributes: (cell) => ({ style: 'padding: 0.25rem 0.5rem; font-size: 0.8rem; text-align:right;', class: 'cursor-pointer hover:bg-gray-50' })
                     }
@@ -332,6 +372,16 @@
                         const dayValue = simulate ? market.simFundingDay : market.fundingDay;
                         const hourValue = simulate ? market.simFundingHour : market.fundingHour;
                         const participation = market.participation;
+                        const markPrice = market.markPrice || 0;
+                        const volume24H = market.volume24H || 0;
+                        const openInterest = (market.longOI || 0) + (market.shortOI || 0);
+                        
+                        // Calculate new metrics
+                        const openInterestUSD = openInterest * markPrice;
+                        const netSkew = (market.longOI || 0) - (market.shortOI || 0);
+                        const turnover = openInterestUSD > 0 ? volume24H / openInterestUSD : 0;
+                        const fundingCostPerDayUSD = openInterestUSD * (market.fundingDay || 0) / 100; // fundingDay is already in percentage
+                        
                         return [
                             ticker,
                             yearValue,
@@ -339,8 +389,13 @@
                             hourValue,
                             parseInt(market.longOI || 0),
                             parseInt(market.shortOI || 0),
-                            market.volume24H || 0,
-                            participation
+volume24H,
+                            participation,
+                            // New columns
+                            openInterestUSD,
+                            netSkew,
+                            turnover,
+                            fundingCostPerDayUSD
                         ];
                     });
                 }
