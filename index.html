@@ -5,43 +5,49 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Reya Funding Rates</title>
     <script src="https://unpkg.com/gridjs/dist/gridjs.umd.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@4.1.10/dist/tailwind.min.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
     <link href="https://unpkg.com/gridjs/dist/theme/mermaid.min.css" rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .loading { display: none; }
         .loading.active { display: inline-block; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .conn-dot { height: 0.9em; width: 0.9em; border-radius: 50%; display: inline-block; margin-right: .4em; }
-        .conn-dot.green { background: #22c55e; }
+        .conn-dot { height: 0.9em; width: 0.9em; border-radius: 50%; display: inline-block; margin-right: 0.4em; }
+        .conn-dot.green { background: #10b981; } /* Updated green to Tailwind 4's emerald-500 */
         .conn-dot.red { background: #ef4444; }
-        .conn-dot.yellow { background: #f59e42; }
+        .conn-dot.yellow { background: #f59e0b; } /* Updated yellow to Tailwind 4's amber-500 */
         .gridjs-table { width: 100% !important; }
         .gridjs-wrapper { border-radius: 0 !important; }
-        @media (max-width: 639px) {
-            body { font-size: 12px; padding: 0.25rem; }
-            h1 { font-size: 1.25rem; }
-            h2 { font-size: 1rem; }
+        
+        /* Responsive styles */
+        @media (max-width: 767px) {
+            html { font-size: 14px; }
+            body { padding: 0.5rem; }
+            h1 { font-size: 1.5rem; }
+            h2 { font-size: 1.25rem; }
         }
+        
         @media (min-width: 1024px) {
-            body { font-size: 16px; padding: 1.5rem; }
-            h1 { font-size: 2.25rem !important; margin-bottom: 1.5rem !important; font-weight: 700 !important; }
-            h2 { font-size: 1.5rem !important; margin: 2rem 0 1.25rem !important; font-weight: 600 !important; }
-            #lastUpdated { font-size: 0.9rem !important; margin-bottom: 1rem !important; }
-            .container { max-width: 1400px !important; margin: 0 auto !important; padding: 0 2rem !important; }
+            html { font-size: 16px; }
+            body { padding: 2rem; }
+            .container { max-width: 1400px; margin-left: auto; margin-right: auto; padding-left: 2rem; padding-right: 2rem; }
         }
+        
+        /* Custom utilities */
+        .min-h-screen { min-height: 100vh; }
+        .whitespace-nowrap { white-space: nowrap; }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen p-2 md:p-8">
-    <div class="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="container mx-auto px-4 max-w-7xl">
 
-        <header class="mb-8 md:mb-10 lg:mb-12 px-0 w-full">
-            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between w-full gap-2 sm:gap-3">
-              <h1 class="text-2xl sm:text-3xl font-extrabold text-gray-800 mb-2 sm:mb-0">Reya Funding Rates</h1>
-              <div class="grid grid-cols-2 sm:flex sm:flex-row gap-2 w-full sm:w-auto">
+        <header class="mb-8 md:mb-10 lg:mb-12 w-full">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between w-full gap-4">
+              <h1 class="text-2xl sm:text-3xl font-bold text-gray-800 mb-4 sm:mb-0">Reya Funding Rates</h1>
+              <div class="grid grid-cols-2 sm:flex gap-3 w-full sm:w-auto">
                 <a href="https://x.com/0xCK1" target="_blank" rel="noopener noreferrer"
-                   class="inline-flex items-center justify-center h-10 sm:h-12 w-full sm:min-w-[140px] px-3 sm:px-4 py-2 rounded-lg sm:rounded-xl text-sm sm:text-base font-medium sm:font-semibold border border-gray-300 text-blue-700 bg-white hover:bg-blue-50 transition focus:outline-none focus:ring-2 focus:ring-blue-500 whitespace-nowrap">
+                class="inline-flex items-center justify-center h-10 sm:h-12 w-full sm:min-w-[150px] px-3 sm:px-4 py-2 rounded-lg sm:rounded-xl text-sm sm:text-base font-medium sm:font-semibold border border-gray-300 bg-white text-gray-800 hover:bg-gray-100 transition focus:outline-none focus:ring-2 focus:ring-blue-500 whitespace-nowrap">
                   <i class="fa-brands fa-x-twitter text-lg sm:text-xl"></i>
                   <span class="ml-1.5 sm:ml-2">Follow @0xCK1</span>
                 </a>
@@ -57,68 +63,108 @@
                   <span>Simulate $10K</span>
                 </button>
                 <button type="button" id="autoRefreshBtn"
-                  class="col-span-2 sm:col-auto inline-flex items-center justify-center h-10 sm:h-12 w-full sm:min-w-[140px] px-3 sm:px-4 py-2 rounded-lg sm:rounded-xl text-sm sm:text-base font-medium sm:font-semibold border border-gray-300 bg-white text-gray-800 hover:bg-gray-100 transition focus:outline-none focus:ring-2 focus:ring-blue-500 whitespace-nowrap">
+                  class="sm:col-span-1 col-span-2 inline-flex items-center justify-center h-10 sm:h-12 w-full sm:w-auto min-w-[140px] px-4 py-2 rounded-lg sm:rounded-xl text-sm sm:text-base font-medium border border-gray-300 bg-white text-gray-800 hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 whitespace-nowrap">
                   <i class="fa-solid fa-arrows-rotate text-base sm:text-lg"></i>
                   <span class="ml-1.5 sm:ml-2">Auto Refresh</span>
                   <span id="autoRefresh" class="ml-1 text-gray-500 text-xs sm:text-sm"></span>
                 </button>
               </div>
             </div>
-            <div class="flex justify-end mt-3">
+            <div class="flex justify-end mt-4">
               <div class="flex flex-col items-end">
                 <div id="connStatus" class="flex items-center">
                   <span class="conn-dot yellow mr-2" id="connDot"></span>
-                  <span id="connMsg" class="text-sm text-gray-500">Connecting...</span>
+                  <span id="connMsg" class="text-sm text-gray-600">Connecting...</span>
                 </div>
-                <div id="lastUpdated" class="text-sm text-gray-500 mt-1"></div>
+                <div id="lastUpdated" class="text-sm text-gray-600 mt-1"></div>
               </div>
             </div>
         </header>
 
         <main class="space-y-6 lg:space-y-8">
-            <section>
-                <h2 class="text-lg font-semibold text-gray-700 mb-2">Top 5 Highest Funding Rates</h2>
-                <div class="overflow-x-auto -mx-4 sm:mx-0 w-auto sm:w-auto">
-                    <div class="px-4 sm:px-0">
-                        <div id="highRatesTable" class="w-auto"></div>
+            <section class="space-y-6">
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-700 mb-3">Top 5 Highest Funding Rates</h2>
+                    <div class="overflow-x-auto -mx-2 sm:mx-0">
+                        <div class="px-2 sm:px-0">
+                            <div id="highRatesTable" class="w-auto"></div>
+                        </div>
                     </div>
                 </div>
-                <h2 class="text-lg font-semibold text-gray-700 mb-2 mt-6">Top 5 Lowest Funding Rates</h2>
-                <div class="overflow-x-auto -mx-4 sm:mx-0 w-auto sm:w-auto">
-                    <div class="px-4 sm:px-0">
-                        <div id="lowRatesTable" class="w-auto"></div>
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-700 mb-3 mt-8">Top 5 Lowest Funding Rates</h2>
+                    <div class="overflow-x-auto -mx-2 sm:mx-0">
+                        <div class="px-2 sm:px-0">
+                            <div id="lowRatesTable" class="w-auto"></div>
+                        </div>
                     </div>
                 </div>
             </section>
-            <h2 class="text-lg font-semibold text-gray-700 mb-2">Market Stats</h2>
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                <div class="bg-white p-4 rounded-lg shadow border border-gray-200">
-                    <div class="text-sm font-medium text-gray-500">Total 24h Volume</div>
-                    <div id="totalVolume24H" class="text-2xl font-semibold text-blue-700">$0.00</div>
-                </div>
-                <div class="bg-white p-4 rounded-lg shadow border border-gray-200">
-                    <div class="text-sm font-medium text-gray-500">Total OI ($)</div>
-                    <div id="totalOI" class="text-2xl font-semibold text-purple-700">$0.00</div>
-                </div>                
-                <div class="bg-white p-4 rounded-lg shadow border border-gray-200">
-                    <div class="text-sm font-medium text-gray-500">Total Long OI</div>
-                    <div id="totalLongOI" class="text-2xl font-semibold text-green-600">$0.00</div>
-                </div>
-                <div class="bg-white p-4 rounded-lg shadow border border-gray-200">
-                    <div class="text-sm font-medium text-gray-500">Total Short OI</div>
-                    <div id="totalShortOI" class="text-2xl font-semibold text-red-600">$0.00</div>
+            
+            <div>
+                <h2 class="text-lg font-semibold text-gray-700 mb-3">Market Stats</h2>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                    <div class="overflow-hidden rounded-lg bg-white px-4 py-5 shadow-sm sm:p-6">
+                        <div class="text-sm font-medium text-gray-500 mb-1">Total 24h Volume</div>
+                        <div id="totalVolume24H" class="text-2xl font-semibold text-blue-600">$0.00</div>
+                    </div>
+                    <div class="overflow-hidden rounded-lg bg-white px-4 py-5 shadow-sm sm:p-6">
+                        <div class="text-sm font-medium text-gray-500 mb-1">Total OI ($)</div>
+                        <div id="totalOI" class="text-2xl font-semibold text-purple-600">$0.00</div>
+                    </div>
+                    <div class="overflow-hidden rounded-lg bg-white px-4 py-5 shadow-sm sm:p-6">
+                        <div class="text-sm font-medium text-gray-500 mb-1">Total Long OI</div>
+                        <div id="totalLongOI" class="text-2xl font-semibold text-emerald-600">$0.00</div>
+                    </div>
+                    <div class="overflow-hidden rounded-lg bg-white px-4 py-5 shadow-sm sm:p-6">
+                        <div class="text-sm font-medium text-gray-500 mb-1">Total Short OI</div>
+                        <div id="totalShortOI" class="text-2xl font-semibold text-red-600">$0.00</div>
+                    </div>
                 </div>
             </div>
+            
             <section>
-                <h2 class="text-lg font-semibold text-gray-700 mb-2">All Markets</h2>
-                <div class="overflow-x-auto -mx-4 sm:mx-0">
-                    <div class="min-w-[1100px] px-4 sm:min-w-0 sm:px-0">
+                <h2 class="text-lg font-semibold text-gray-700 mb-3">All Markets</h2>
+                <div class="overflow-x-auto -mx-2 sm:mx-0">
+                    <div class="min-w-[1100px] px-2 sm:min-w-0 sm:px-0">
                         <div id="allMarketsTable"></div>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between mb-3 mt-12">
+                    <h2 class="text-lg font-semibold text-gray-700">Funding Arb</h2>
+                    <div class="flex items-center space-x-2">
+                        <label for="fundingInterval" class="text-sm font-medium text-gray-700 whitespace-nowrap">Funding Rate:</label>
+                        <select id="fundingInterval" class="pl-3 pr-8 py-1.5 text-sm border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md">
+                            <option value="hourly">Hourly</option>
+                            <option value="daily">Daily</option>
+                            <option value="yearly">Yearly</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="overflow-x-auto -mx-2 sm:mx-0">
+                    <div class="px-2 sm:px-0">
+                        <div id="fundingArbTable" class="w-full"></div>
                     </div>
                 </div>
             </section>
         </main>
     </div>
+
+    <footer class="mt-12 border-t border-gray-200">
+        <div class="mx-auto max-w-7xl px-6 py-12 md:flex md:items-center md:justify-between lg:px-8">
+            <div class="flex justify-center gap-x-6 md:order-2">
+                <a href="https://x.com/0xCK1" target="_blank" rel="noopener noreferrer" class="text-gray-600 hover:text-gray-800">
+                    <span class="sr-only">X</span>
+                    <svg class="size-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M13.6823 10.6218L20.2391 3H18.6854L12.9921 9.61788L8.44486 3H3.2002L10.0765 13.0074L3.2002 21H4.75404L10.7663 14.0113L15.5685 21H20.8131L13.6819 10.6218H13.6823ZM11.5541 13.0956L10.8574 12.0991L5.31391 4.16971H7.70053L12.1742 10.5689L12.8709 11.5655L18.6861 19.8835H16.2995L11.5541 13.096V13.0956Z" />
+                    </svg>
+                </a>
+            </div>
+            <p class="mt-8 text-center text-sm/6 text-gray-600 md:order-1 md:mt-0">&copy; 2025 is a great year to trade.</p>
+        </div>
+    </footer>
+
     <script>
         (() => {
             const autoRefreshBtn = document.getElementById('autoRefreshBtn');
@@ -133,6 +179,7 @@
             let simulationMode = false;
 
             let highRatesGrid, lowRatesGrid, allMarketsGrid;
+            let fundingArbGrid;
             let autoTimer = null, countdown = 60, countdownTimer = null;
             let cachedData = null;
 
@@ -187,6 +234,60 @@
                 if (countdownTimer) clearInterval(countdownTimer);
                 autoTimer = null; countdownTimer = null;
             }
+            
+            // Generate funding arb data with Reya and Hyperliquid rates
+            // --- replace everything inside generateFundingArbData with this ----------
+            async function generateFundingArbData(reyaData, interval = 'hourly') {
+            if (!reyaData?.length) return [];
+
+            try {
+                /* ───────────────────────────── 1. fetch Hyperliquid ─────────────────────────── */
+                const res = await fetch('https://api.hyperliquid.xyz/info', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ type: 'metaAndAssetCtxs' })
+                });
+                if (!res.ok) throw new Error('Hyperliquid API error');
+                const [meta, assetCtxs] = await res.json();          // meta.universe + assetCtxs
+
+                /* ────────────────────────── 2. build {TICKER: ratePct} map ───────────────────── */
+                const hlRates = {};                                  // % per chosen interval
+                const multiplier =
+                interval === 'hourly' ? (1 / 8) :
+                interval === 'daily'  ? (24 / 8) :
+                /* yearly */          (24 * 365 / 8);
+
+                meta.universe.forEach((asset, i) => {
+                const ctx = assetCtxs[i];
+                if (!ctx?.funding) return;
+                const ratePct = parseFloat(ctx.funding) * 100 * multiplier; // % per interval
+                hlRates[asset.name.toUpperCase()] = ratePct;
+                });
+
+                /* ─────────────────────────── 3. merge with Reya data ─────────────────────────── */
+                return reyaData.map(mkt => {
+                const reyaPct =
+                    (mkt.fundingRateAnnualized ?? 0) /
+                    (interval === 'hourly' ? 365 * 24 :
+                    interval === 'daily'  ? 365      : 1);
+
+                const tickerKey = mkt.ticker.split('-')[0].toUpperCase();   // "BTC" from "BTC-rUSD"
+                const hlPct     = hlRates[tickerKey] ?? null;
+                const diffPct   = hlPct == null ? null : reyaPct - hlPct;
+
+                return [
+                    mkt.ticker || 'N/A',
+                    formatRate(reyaPct, 6) + '%',
+                    hlPct != null ? formatRate(hlPct, 6) + '%' : 'N/A',
+                    diffPct != null ? formatRate(diffPct, 6) + '%' : 'N/A'
+                ];
+                });
+            } catch (err) {
+                console.error('generateFundingArbData:', err);
+                return [];
+            }
+            }
+
             async function fetchAndRender() {
                 setConn('loading');
                 try {
@@ -344,7 +445,7 @@
                 
                 return baseColumns;
             }
-            function renderTables() {
+            async function renderTables() {
                 const simulate = simulationMode;
                 const notional = 10000;
                 let all = cachedData.map(m => {
@@ -388,7 +489,7 @@
                             hourValue,
                             parseInt(market.longOI || 0),
                             parseInt(market.shortOI || 0),
-volume24H,
+                            volume24H,
                             participation,
                             // New columns
                             openInterestUSD,
@@ -410,36 +511,57 @@ volume24H,
                         sort: undefined
                     })),
                     data: formatGridData(top5High),
-                    className: { 
-                        container: 'w-full',
-                            table: 'w-full',
-                            th: 'bg-gray-50 text-gray-500 text-xs font-medium uppercase tracking-wider',
-                            td: 'py-0',
+                    className: {
+                        container: 'w-full overflow-hidden',
+                        table: 'w-full border-collapse',
+                        thead: 'bg-gray-50',
+                        th: 'px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider',
+                        td: 'px-3 py-2 text-sm text-gray-900 border-b border-gray-100',
+                        footer: 'px-3 py-2 text-xs text-gray-500 border-t border-gray-100',
+                        pagination: 'px-3 py-2 text-sm text-gray-700 border-t border-gray-100',
+                        paginationButton: 'px-3 py-1 rounded text-gray-500 hover:bg-gray-100',
+                        paginationButtonCurrent: 'text-blue-600 font-medium',
+                        loading: 'px-3 py-2 text-sm text-gray-500',
+                        noResults: 'px-3 py-2 text-sm text-gray-500',
+                        error: 'px-3 py-2 text-sm text-red-500',
+                        input: 'block w-full px-3 py-1.5 text-sm text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500',
+                        search: 'block w-full px-3 py-1.5 text-sm text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500',
+                        sortButton: 'flex items-center space-x-1 text-left text-xs font-medium text-gray-500 uppercase tracking-wider group focus:outline-none',
+                        sortIcon: 'w-3 h-3 text-gray-400 group-hover:text-gray-500'
                     },
                     style: {
-                            table: {
-                                'white-space': 'nowrap',
-                                'border-collapse': 'collapse'
-                            },
-                            th: {
-                                'padding': '0.5rem',
-                                'font-size': '0.7rem',
-                                'font-weight': '500',
-                                'text-transform': 'uppercase',
-                                'letter-spacing': '0.05em',
-                                'border-bottom': '1px solid #e5e7eb'
-                            },
-                            td: {
-                                'padding': '0.25rem 0.5rem',
-                                'font-size': '0.75rem',
-                                'border-bottom': '1px solid #f3f4f6'
-                            }
+                        table: {
+                            whiteSpace: 'nowrap',
+                            borderCollapse: 'collapse',
+                            width: '100%',
+                            tableLayout: 'auto'
                         },
-                        height: 'auto',
-                        fixedHeader: true,
-                        sort: false,
-                        search: false,
-                        pagination: false
+                        th: {
+                            padding: '0.5rem 0.75rem',
+                            fontSize: '0.75rem',
+                            fontWeight: '500',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.05em',
+                            borderBottom: '1px solid #e5e7eb',
+                            backgroundColor: '#f9fafb',
+                            textAlign: 'left',
+                            position: 'relative'
+                        },
+                        td: {
+                            padding: '0.5rem 0.75rem',
+                            fontSize: '0.875rem',
+                            borderBottom: '1px solid #f3f4f6',
+                            verticalAlign: 'middle',
+                            lineHeight: '1.25rem'
+                        }
+                    },
+                    height: 'auto',
+                    fixedHeader: true,
+                    sort: false,
+                    search: false,
+                    pagination: false,
+                    resizable: true,
+                    autoWidth: false
                 }).render(document.getElementById('highRatesTable'));
 
                 lowRatesGrid = new gridjs.Grid({
@@ -449,40 +571,61 @@ volume24H,
                         sort: undefined
                     })),
                     data: formatGridData(top5Low),
-                    className: { 
-                        container: 'w-full',
-                            table: 'w-full',
-                            th: 'bg-gray-50 text-gray-500 text-xs font-medium uppercase tracking-wider',
-                            td: 'py-0',
+                    className: {
+                        container: 'w-full overflow-hidden',
+                        table: 'w-full border-collapse',
+                        thead: 'bg-gray-50',
+                        th: 'px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider',
+                        td: 'px-3 py-2 text-sm text-gray-900 border-b border-gray-100',
+                        footer: 'px-3 py-2 text-xs text-gray-500 border-t border-gray-100',
+                        pagination: 'px-3 py-2 text-sm text-gray-700 border-t border-gray-100',
+                        paginationButton: 'px-3 py-1 rounded text-gray-500 hover:bg-gray-100',
+                        paginationButtonCurrent: 'text-blue-600 font-medium',
+                        loading: 'px-3 py-2 text-sm text-gray-500',
+                        noResults: 'px-3 py-2 text-sm text-gray-500',
+                        error: 'px-3 py-2 text-sm text-red-500',
+                        input: 'block w-full px-3 py-1.5 text-sm text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500',
+                        search: 'block w-full px-3 py-1.5 text-sm text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500',
+                        sortButton: 'flex items-center space-x-1 text-left text-xs font-medium text-gray-500 uppercase tracking-wider group focus:outline-none',
+                        sortIcon: 'w-3 h-3 text-gray-400 group-hover:text-gray-500'
                     },
                     style: {
-                            table: {
-                                'white-space': 'nowrap',
-                                'border-collapse': 'collapse'
-                            },
-                            th: {
-                                'padding': '0.5rem',
-                                'font-size': '0.7rem',
-                                'font-weight': '500',
-                                'text-transform': 'uppercase',
-                                'letter-spacing': '0.05em',
-                                'border-bottom': '1px solid #e5e7eb'
-                            },
-                            td: {
-                                'padding': '0.25rem 0.5rem',
-                                'font-size': '0.75rem',
-                                'border-bottom': '1px solid #f3f4f6'
-                            }
+                        table: {
+                            whiteSpace: 'nowrap',
+                            borderCollapse: 'collapse',
+                            width: '100%',
+                            tableLayout: 'auto'
                         },
-                        height: 'auto',
-                        fixedHeader: true,
-                        sort: false,
-                        search: false,
-                        pagination: false
+                        th: {
+                            padding: '0.5rem 0.75rem',
+                            fontSize: '0.75rem',
+                            fontWeight: '500',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.05em',
+                            borderBottom: '1px solid #e5e7eb',
+                            backgroundColor: '#f9fafb',
+                            textAlign: 'left',
+                            position: 'relative'
+                        },
+                        td: {
+                            padding: '0.5rem 0.75rem',
+                            fontSize: '0.875rem',
+                            borderBottom: '1px solid #f3f4f6',
+                            verticalAlign: 'middle',
+                            lineHeight: '1.25rem'
+                        }
+                    },
+                    height: 'auto',
+                    fixedHeader: true,
+                    sort: false,
+                    search: false,
+                    pagination: false,
+                    resizable: true,
+                    autoWidth: false
                 }).render(document.getElementById('lowRatesTable'));
 
                 allMarketsGrid = new gridjs.Grid({
-                    columns: getColumns(simulate, 'all').map((col, index) => {
+                    columns: getColumns(simulationMode, 'all').map((col, index) => {
                         const column = { ...col };
                         column.sort = {
                             multiColumn: false,
@@ -504,74 +647,137 @@ volume24H,
                     }),
                     data: formatGridData(all),
                     className: {
-                            container: 'w-full',
-                            table: 'w-full',
-                            th: 'bg-gray-50 text-gray-500 text-xs font-medium uppercase tracking-wider',
-                            td: 'py-0',
-                            search: 'w-full p-2 mb-2 border rounded text-xs',
-                            sort: 'ml-1',
-                            sortButton: 'w-full text-left',
-                            sortButtonUp: 'text-gray-400 hover:text-gray-600',
-                            sortButtonDown: 'text-gray-400 hover:text-gray-600',
-                            sortButtonNone: 'text-gray-300 hover:text-gray-400',
-                            loading: 'p-4 text-center text-gray-500',
-                            notfound: 'p-4 text-center text-gray-500',
-                        },
+                        container: 'w-full',
+                        table: 'w-full',
+                        th: 'bg-gray-50 text-gray-500 text-xs font-medium uppercase tracking-wider',
+                        td: 'py-0',
+                        search: 'w-full p-2 mb-2 border rounded text-xs',
+                        sort: 'ml-1',
+                        sortButton: 'w-full text-left',
+                        sortButtonUp: 'text-gray-400 hover:text-gray-600',
+                        sortButtonDown: 'text-gray-400 hover:text-gray-600',
+                        sortButtonNone: 'text-gray-300 hover:text-gray-400',
+                        loading: 'p-4 text-center text-gray-500',
+                        notfound: 'p-4 text-center text-gray-500',
+                    },
                     style: {
-                            table: {
-                                'white-space': 'nowrap',
-                                'border-collapse': 'collapse',
-                                'table-layout': 'fixed',
-                                'width': '100%',
-                                'margin': '0 auto'
-                            },
-                            th: {
-                                'padding': '0.5rem',
-                                'font-size': '0.7rem',
-                                'font-weight': '500',
-                                'text-transform': 'uppercase',
-                                'letter-spacing': '0.05em',
-                                'border-bottom': '1px solid #e5e7eb',
-                                'position': 'sticky',
-                                'top': 0,
-                                'background': '#f9fafb',
-                                'z-index': 1,
-                                'overflow': 'hidden',
-                                'text-overflow': 'ellipsis',
-                                'white-space': 'nowrap'
-                            },
-                            td: {
-                                'padding': '0.25rem 0.5rem',
-                                'font-size': '0.75rem',
-                                'border-bottom': '1px solid #f3f4f6',
-                                'overflow': 'hidden',
-                                'text-overflow': 'ellipsis',
-                                'white-space': 'nowrap'
-                            },
-                            'input[type="search"]': {
-                                'font-size': '0.75rem',
-                                'padding': '0.25rem 0.5rem',
-                                'height': 'auto'
-                            }
+                        table: {
+                            whiteSpace: 'nowrap',
+                            borderCollapse: 'collapse',
+                            tableLayout: 'fixed',
+                            width: '100%',
+                            margin: '0 auto'
                         },
-                        language: {
-                            search: {
-                                placeholder: 'Search Ticker...',
-                            },
-                            sort: {
-                                ascending: '▲',
-                                descending: '▼',
-                                clear: 'Clear sort'
-                            },
-                            notfound: 'No records found',
-                            loading: 'Loading...'
-                        },                        
-                    sort: true, 
-                    search: true, 
-                    pagination: false, 
-                    height: 'auto', 
-                    fixedHeader: true
+                        th: {
+                            position: 'sticky',
+                            top: 0,
+                            backgroundColor: '#f9fafb',
+                            zIndex: 1,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            padding: '0.5rem 0.75rem',
+                            fontSize: '0.75rem',
+                            fontWeight: '500',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.05em',
+                            borderBottom: '1px solid #e5e7eb',
+                            textAlign: 'left'
+                        },
+                        td: {
+                            padding: '0.25rem 0.5rem',
+                            fontSize: '0.75rem',
+                            borderBottom: '1px solid #f3f4f6',
+                            textAlign: 'right',
+                            verticalAlign: 'middle',
+                            lineHeight: '1.25rem',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            maxWidth: '200px'
+                        },
+                        input: {
+                            fontSize: '0.75rem',
+                            padding: '0.25rem 0.5rem',
+                            height: 'auto'
+                        }
+                    },
+                    language: {
+                        search: {
+                            placeholder: 'Search Ticker...'
+                        },
+                        sort: {
+                            ascending: '▲',
+                            descending: '▼',
+                            clear: 'Clear sort'
+                        },
+                        notfound: 'No records found',
+                        loading: 'Loading...'
+                    },
+                    sort: true,
+                    search: true,
+                    pagination: false,
+                    height: 'auto',
+                    fixedHeader: true,
+                    resizable: true,
+                    autoWidth: false
                 }).render(document.getElementById('allMarketsTable'));
+
+                // Initialize or update Funding Arb table
+                try {
+                    const fundingArbData = await generateFundingArbData(all, 'hourly');
+                    
+                    if (fundingArbGrid) {
+                        fundingArbGrid.updateConfig({
+                            data: fundingArbData
+                        }).forceRender();
+                    } else {
+                        fundingArbGrid = new gridjs.Grid({
+                            columns: [
+                                { name: 'Ticker', width: '20%' },
+                                { 
+                                    name: 'Reya', 
+                                    formatter: (cell) => gridjs.html(`<div class="text-right">${cell}</div>`)
+                                },
+                                { 
+                                    name: 'Hyperliquid',
+                                    formatter: (cell) => gridjs.html(`<div class="text-right">${cell}</div>`)
+                                },
+                                { 
+                                    name: 'Reya-Hyperliquid',
+                                    formatter: (cell) => {
+                                        if (cell === 'N/A') return gridjs.html(`<div class="text-right text-gray-500">N/A</div>`);
+                                        const value = parseFloat(cell);
+                                        const colorClass = value >= 0 ? 'text-green-600' : 'text-red-600';
+                                        return gridjs.html(`<div class="text-right ${colorClass} font-medium">${cell}</div>`);
+                                    }
+                                }
+                            ],
+                            data: fundingArbData,
+                            sort: true,
+                            search: true,
+                            pagination: false,
+                            className: {
+                                container: 'w-full',
+                                table: 'w-full',
+                                th: 'bg-gray-50 text-gray-500 text-xs font-medium uppercase tracking-wider',
+                                td: 'py-0',
+                                search: 'w-full p-2 mb-2 border rounded text-xs',
+                                sort: 'ml-1',
+                                sortButton: 'w-full text-left',
+                                sortButtonUp: 'text-gray-400 hover:text-gray-600',
+                                sortButtonDown: 'text-gray-400 hover:text-gray-600',
+                                sortButtonNone: 'text-gray-300 hover:text-gray-400',
+                                loading: 'p-4 text-center text-gray-500',
+                                notfound: 'p-4 text-center text-gray-500',
+                            },
+                            resizable: true,
+                            autoWidth: false
+                        }).render(document.getElementById('fundingArbTable'));
+                    }
+                } catch (error) {
+                    console.error('Error initializing Funding Arb table:', error);
+                }
             }
             function updateSimIcons() {
                 if (simulationMode) {
@@ -613,6 +819,22 @@ volume24H,
                     clearAutoRefresh();
                 }
             });
+            
+            // Add event listener for funding interval change
+            document.getElementById('fundingInterval')?.addEventListener('change', async (e) => {
+                const interval = e.target.value;
+                if (cachedData && fundingArbGrid) {
+                    try {
+                        const fundingArbData = await generateFundingArbData(cachedData, interval);
+                        fundingArbGrid.updateConfig({
+                            data: fundingArbData
+                        }).forceRender();
+                    } catch (error) {
+                        console.error('Error updating funding arb data:', error);
+                    }
+                }
+            });
+            
             fetchAndRender();
             updateAutoRefreshText();
         })();
