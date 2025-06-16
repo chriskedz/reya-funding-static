@@ -44,7 +44,7 @@
 
         <header class="mb-8 md:mb-10 lg:mb-12 w-full">
             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between w-full gap-4">
-              <h1 class="text-2xl sm:text-3xl font-bold text-gray-800 mb-4 sm:mb-0">Reya Funding Rates</h1>
+              <h1 class="text-2xl sm:text-3xl font-bold text-gray-800 mb-4 sm:mb-0">Reya Funding Rates & More</h1>
               <div class="grid grid-cols-2 sm:flex gap-3 w-full sm:w-auto">
                 <a href="https://x.com/0xCK1" target="_blank" rel="noopener noreferrer"
                 class="inline-flex items-center justify-center h-10 sm:h-12 w-full sm:min-w-[150px] px-3 sm:px-4 py-2 rounded-lg sm:rounded-xl text-sm sm:text-base font-medium sm:font-semibold border border-gray-300 bg-white text-gray-800 hover:bg-gray-100 transition focus:outline-none focus:ring-2 focus:ring-blue-500 whitespace-nowrap">
@@ -131,15 +131,17 @@
                     </div>
                 </div>
 
-                <div class="flex items-center justify-between mb-3 mt-12">
+                <div class="flex items-center justify-between mb-4 mt-12">
                     <h2 class="text-lg font-semibold text-gray-700">Funding Arb</h2>
                     <div class="flex items-center space-x-2">
                         <label for="fundingInterval" class="text-sm font-medium text-gray-700 whitespace-nowrap">Funding Rate:</label>
-                        <select id="fundingInterval" class="pl-3 pr-8 py-1.5 text-sm border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md">
-                            <option value="hourly">Hourly</option>
-                            <option value="daily">Daily</option>
-                            <option value="yearly">Yearly</option>
-                        </select>
+                        <div class="relative">
+                            <select id="fundingInterval" class="block w-28 pl-3 pr-8 py-1.5 text-sm border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md">
+                                <option value="hourly">Hourly</option>
+                                <option value="daily">Daily</option>
+                                <option value="yearly">Yearly</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
                 <div class="overflow-x-auto -mx-2 sm:mx-0">
@@ -725,23 +727,72 @@
 
                 // Initialize or update Funding Arb table
                 try {
-                    const fundingArbData = await generateFundingArbData(all, 'hourly');
+                    const interval = document.getElementById('fundingInterval')?.value || 'hourly';
+                    const fundingArbData = await generateFundingArbData(all, interval);
                     
+                    // Function to parse percentage values for sorting
+                    // Returns an object with value and isNegative flag for proper sorting
+                    const parsePercentage = (value) => {
+                        if (value === 'N/A') return { value: -Infinity, isNegative: false };
+                        const num = parseFloat(value.replace('%', ''));
+                        return isNaN(num) 
+                            ? { value: -Infinity, isNegative: false } 
+                            : { value: Math.abs(num), isNegative: num < 0 };
+                    };
+                    
+                    // Custom sort function that handles negative numbers first in ascending order
+                    const sortPercentage = (a, b, order = 1) => {
+                        const aValue = parsePercentage(a);
+                        const bValue = parsePercentage(b);
+                        
+                        // If one is negative and the other isn't, negative comes first in ascending order
+                        if (aValue.isNegative !== bValue.isNegative) {
+                            return aValue.isNegative ? -1 : 1;
+                        }
+                        
+                        // If both are negative, reverse the comparison to get the smallest (most negative) first
+                        if (aValue.isNegative && bValue.isNegative) {
+                            return bValue.value - aValue.value;
+                        }
+                        
+                        // For positive numbers or when comparing two N/As
+                        return (aValue.value - bValue.value) * order;
+                    };
+
                     if (fundingArbGrid) {
                         fundingArbGrid.updateConfig({
-                            data: fundingArbData
+                            data: fundingArbData,
+                            sort: {
+                                multiColumn: false,
+                                initialSort: {
+                                    id: 3, // Index of Reya-Hyperliquid column (0-based)
+                                    order: 'desc' // Sort by highest difference first
+                                }
+                            }
                         }).forceRender();
                     } else {
                         fundingArbGrid = new gridjs.Grid({
                             columns: [
-                                { name: 'Ticker', width: '20%' },
                                 { 
-                                    name: 'Reya', 
-                                    formatter: (cell) => gridjs.html(`<div class="text-right">${cell}</div>`)
+                                    name: 'Ticker', 
+                                    width: '20%',
+                                    sort: {
+                                        compare: (a, b) => a.localeCompare(b)
+                                    }
+                                },
+                                { 
+                                    name: 'Reya',
+                                    formatter: (cell) => gridjs.html(`<div class="text-right">${cell}</div>`),
+                                    sort: {
+                                        compare: (a, b, order) => sortPercentage(a, b, order === 'desc' ? -1 : 1)
+                                    }
                                 },
                                 { 
                                     name: 'Hyperliquid',
-                                    formatter: (cell) => gridjs.html(`<div class="text-right">${cell}</div>`)
+                                    formatter: (cell) => gridjs.html(`<div class="text-right">${cell}</div>`),
+                                    sort: {
+                                        compare: (a, b, order) => sortPercentage(a, b, order === 'desc' ? -1 : 1)
+                                    }
                                 },
                                 { 
                                     name: 'Reya-Hyperliquid',
@@ -750,11 +801,20 @@
                                         const value = parseFloat(cell);
                                         const colorClass = value >= 0 ? 'text-green-600' : 'text-red-600';
                                         return gridjs.html(`<div class="text-right ${colorClass} font-medium">${cell}</div>`);
+                                    },
+                                    sort: {
+                                        compare: (a, b, order) => sortPercentage(a, b, order === 'desc' ? -1 : 1)
                                     }
                                 }
                             ],
                             data: fundingArbData,
-                            sort: true,
+                            sort: {
+                                multiColumn: false,
+                                initialSort: {
+                                    id: 3, // Index of Reya-Hyperliquid column (0-based)
+                                    order: 'desc' // Sort by highest difference first
+                                }
+                            },
                             search: true,
                             pagination: false,
                             className: {
@@ -821,13 +881,21 @@
             });
             
             // Add event listener for funding interval change
+            // Add event listener for funding interval change
             document.getElementById('fundingInterval')?.addEventListener('change', async (e) => {
                 const interval = e.target.value;
                 if (cachedData && fundingArbGrid) {
                     try {
                         const fundingArbData = await generateFundingArbData(cachedData, interval);
                         fundingArbGrid.updateConfig({
-                            data: fundingArbData
+                            data: fundingArbData,
+                            sort: {
+                                multiColumn: false,
+                                initialSort: {
+                                    id: 3, // Index of Reya-Hyperliquid column (0-based)
+                                    order: 'desc' // Sort by highest difference first
+                                }
+                            }
                         }).forceRender();
                     } catch (error) {
                         console.error('Error updating funding arb data:', error);
