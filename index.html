@@ -134,13 +134,23 @@
                 <div class="flex items-center justify-between mb-4 mt-12">
                     <h2 class="text-lg font-semibold text-gray-700">Funding Arb</h2>
                     <div class="flex items-center space-x-2">
-                        <label for="fundingInterval" class="text-sm font-medium text-gray-700 whitespace-nowrap">Funding Rate:</label>
-                        <div class="relative">
-                            <select id="fundingInterval" class="block w-28 pl-3 pr-8 py-1.5 text-sm border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md">
-                                <option value="hourly">Hourly</option>
-                                <option value="daily">Daily</option>
-                                <option value="yearly">Yearly</option>
-                            </select>
+                        <span class="text-sm font-medium text-gray-700 whitespace-nowrap">Funding Rate Interval:</span>
+                        <div class="relative inline-block text-left">
+                            <div>
+                                <button type="button" class="inline-flex justify-between w-32 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500" id="funding-interval-button" aria-expanded="true" aria-haspopup="true">
+                                    <span id="selected-interval">Hourly</span>
+                                    <svg class="-mr-1 h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                        <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
+                                    </svg>
+                                </button>
+                            </div>
+                            <div id="interval-dropdown" class="absolute right-0 z-10 mt-2 w-32 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none hidden" role="menu" aria-orientation="vertical" aria-labelledby="menu-button" tabindex="-1">
+                                <div class="py-1" role="none">
+                                    <button type="button" class="text-gray-700 block w-full px-4 py-2 text-left text-sm hover:bg-gray-100" role="menuitem" tabindex="-1" data-value="hourly">Hourly</button>
+                                    <button type="button" class="text-gray-700 block w-full px-4 py-2 text-left text-sm hover:bg-gray-100" role="menuitem" tabindex="-1" data-value="daily">Daily</button>
+                                    <button type="button" class="text-gray-700 block w-full px-4 py-2 text-left text-sm hover:bg-gray-100" role="menuitem" tabindex="-1" data-value="yearly">Yearly</button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -883,26 +893,62 @@
             });
             
             // Add event listener for funding interval change
-            // Add event listener for funding interval change
-            document.getElementById('fundingInterval')?.addEventListener('change', async (e) => {
-                const interval = e.target.value;
-                if (cachedData && fundingArbGrid) {
-                    try {
-                        const fundingArbData = await generateFundingArbData(cachedData, interval);
-                        fundingArbGrid.updateConfig({
-                            data: fundingArbData,
-                            sort: {
-                                multiColumn: false,
-                                initialSort: {
-                                    id: 3, // Index of Reya-Hyperliquid column (0-based)
-                                    order: 'desc' // Sort by highest difference first
-                                }
-                            }
-                        }).forceRender();
-                    } catch (error) {
-                        console.error('Error updating funding arb data:', error);
-                    }
+            // Handle funding interval dropdown
+            const fundingIntervalButton = document.getElementById('funding-interval-button');
+            const intervalDropdown = document.getElementById('interval-dropdown');
+            const selectedInterval = document.getElementById('selected-interval');
+            
+            // Toggle dropdown
+            fundingIntervalButton?.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const isExpanded = fundingIntervalButton.getAttribute('aria-expanded') === 'true';
+                fundingIntervalButton.setAttribute('aria-expanded', !isExpanded);
+                if (isExpanded) {
+                    intervalDropdown.classList.add('hidden');
+                    intervalDropdown.classList.remove('block');
+                } else {
+                    intervalDropdown.classList.remove('hidden');
+                    intervalDropdown.classList.add('block');
                 }
+            });
+            
+            // Close dropdown when clicking outside
+            document.addEventListener('click', (e) => {
+                const isClickInside = fundingIntervalButton.contains(e.target) || intervalDropdown.contains(e.target);
+                if (!isClickInside) {
+                    fundingIntervalButton.setAttribute('aria-expanded', 'false');
+                    intervalDropdown.classList.add('hidden');
+                    intervalDropdown.classList.remove('block');
+                }
+            });
+            
+            // Handle interval selection
+            intervalDropdown?.querySelectorAll('button[data-value]').forEach(button => {
+                button.addEventListener('click', async () => {
+                    const interval = button.getAttribute('data-value');
+                    selectedInterval.textContent = button.textContent.trim();
+                    fundingIntervalButton.setAttribute('aria-expanded', 'false');
+                    intervalDropdown.classList.add('hidden');
+                    intervalDropdown.classList.remove('block');
+                    
+                    if (cachedData && fundingArbGrid) {
+                        try {
+                            const fundingArbData = await generateFundingArbData(cachedData, interval);
+                            fundingArbGrid.updateConfig({
+                                data: fundingArbData,
+                                sort: {
+                                    multiColumn: false,
+                                    initialSort: {
+                                        id: 3, // Index of Reya-Hyperliquid column (0-based)
+                                        order: 'desc' // Sort by highest difference first
+                                    }
+                                }
+                            }).forceRender();
+                        } catch (error) {
+                            console.error('Error updating funding arb data:', error);
+                        }
+                    }
+                });
             });
             
             fetchAndRender();
