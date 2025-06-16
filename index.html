@@ -277,8 +277,10 @@
                 const hlPct     = hlRates[tickerKey] ?? null;
                 const diffPct   = hlPct == null ? null : reyaPct - hlPct;
 
+                // Remove "-rUSD" suffix from the ticker if it exists
+                const displayTicker = mkt.ticker ? mkt.ticker.replace(/-rUSD$/, '') : 'N/A';
                 return [
-                    mkt.ticker || 'N/A',
+                    displayTicker,
                     formatRate(reyaPct, 6) + '%',
                     hlPct != null ? formatRate(hlPct, 6) + '%' : 'N/A',
                     diffPct != null ? formatRate(diffPct, 6) + '%' : 'N/A'
