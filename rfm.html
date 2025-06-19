@@ -578,6 +578,7 @@ document.addEventListener('DOMContentLoaded', function() {
       const walletKey = 'wallet_address';
       const dateKey = 'day';
       const amountKey = 'SUM(amount)';
+      const discordKey = 'discordUsername'; // Add Discord username key
       
       console.log('Using columns:', { walletKey, dateKey, amountKey });
       
@@ -594,9 +595,13 @@ document.addEventListener('DOMContentLoaded', function() {
             monetary: 0, // total notional traded (USD)
             lastSeen: null,
             firstSeen: null,
+            discordUsername: row[discordKey] || '', // Store Discord username
             tradeDates: new Set() // track unique trading days
           };
           tradingDaysByWallet[wallet] = new Set();
+        } else if (row[discordKey] && !walletData[wallet].discordUsername) {
+          // Update Discord username if not already set
+          walletData[wallet].discordUsername = row[discordKey];
         }
         
         // Parse date
@@ -683,6 +688,7 @@ document.addEventListener('DOMContentLoaded', function() {
         return {
           wallet,
           ...data,
+          discordUsername: data.discordUsername || '', // Ensure discordUsername is included
           frequency,
           recencyScore: 0,
           frequencyScore: 0,
@@ -750,6 +756,9 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Calculate composite RFM score (R*100 + F*10 + M)
         wallet.rfmScore = (wallet.recencyScore * 100) + (wallet.frequencyScore * 10) + wallet.monetaryScore;
+        
+        // Debug log for RFM score calculation
+        console.log(`Wallet ${wallet.wallet}: R=${wallet.recencyScore}, F=${wallet.frequencyScore}, M=${wallet.monetaryScore}, Score=${wallet.rfmScore}`);
         
         // Determine segment based on scores
         if (wallet.recencyScore >= 4 && wallet.frequencyScore >= 4 && wallet.monetaryScore >= 4) {
@@ -892,9 +901,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const thRfmScore = document.createElement('th');
         thRfmScore.textContent = 'RFM Score';
         thRfmScore.classList.add('w-1/6', 'px-4', 'py-2', 'text-left', 'text-xs', 'font-medium', 'text-gray-500', 'uppercase', 'tracking-wider');
-        const thSegment = document.createElement('th');
-        thSegment.textContent = 'Segment';
-        thSegment.classList.add('w-1/6', 'px-4', 'py-2', 'text-left', 'text-xs', 'font-medium', 'text-gray-500', 'uppercase', 'tracking-wider');
         const thStatus = document.createElement('th');
         thStatus.textContent = 'Status';
         thStatus.classList.add('w-1/6', 'px-4', 'py-2', 'text-left', 'text-xs', 'font-medium', 'text-gray-500', 'uppercase', 'tracking-wider');
@@ -904,7 +910,6 @@ document.addEventListener('DOMContentLoaded', function() {
         tr.appendChild(thFrequency);
         tr.appendChild(thMonetary);
         tr.appendChild(thRfmScore);
-        tr.appendChild(thSegment);
         tr.appendChild(thStatus);
         thead.appendChild(tr);
         table.appendChild(thead);
@@ -930,21 +935,10 @@ document.addEventListener('DOMContentLoaded', function() {
           tdMonetary.textContent = `$${parseFloat(row.monetary).toLocaleString()}`;
           tdMonetary.classList.add('py-3', 'px-6');
           const tdRfmScore = document.createElement('td');
-          tdRfmScore.textContent = row.rfmScore;
-          tdRfmScore.classList.add('py-3', 'px-6');
-          
-          const tdSegment = document.createElement('td');
-          const segmentClass = {
-            'Champions': 'bg-purple-100 text-purple-800',
-            'Loyal': 'bg-blue-100 text-blue-800',
-            'Potential Loyalist': 'bg-green-100 text-green-800',
-            'About-to-Sleep': 'bg-yellow-100 text-yellow-800',
-            'Need Attention': 'bg-orange-100 text-orange-800',
-            'At Risk': 'bg-red-100 text-red-800',
-            'Others': 'bg-gray-100 text-gray-800'
-          }[row.segment] || 'bg-gray-100 text-gray-800';
-          tdSegment.innerHTML = `<span class="px-2 py-1 ${segmentClass} text-xs rounded-full">${row.segment}</span>`;
-          tdSegment.classList.add('py-3', 'px-6');
+          // Format RFM score with leading zeros for consistent 3-digit display
+          const formattedScore = String(row.rfmScore).padStart(3, '0');
+          tdRfmScore.textContent = formattedScore;
+          tdRfmScore.classList.add('py-3', 'px-6', 'font-mono');
           
           const tdStatus = document.createElement('td');
           if (row.isChurned) {
@@ -963,7 +957,6 @@ document.addEventListener('DOMContentLoaded', function() {
           tr.appendChild(tdFrequency);
           tr.appendChild(tdMonetary);
           tr.appendChild(tdRfmScore);
-          tr.appendChild(tdSegment);
           tr.appendChild(tdStatus);
           tbody.appendChild(tr);
         });
@@ -1165,10 +1158,59 @@ document.addEventListener('DOMContentLoaded', function() {
       </div>
     `;
     
+    // Add Wallet Details table
+    html += `
+      <div class="mt-12">
+        <h2 class="text-lg font-semibold mb-4">Wallet Details</h2>
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Wallet</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Discord</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Recency</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Frequency</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Monetary</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">RFM Score</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Segment</th>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+    `;
+    
+    // Add wallet rows
+    wallets.forEach(wallet => {
+      const segmentClass = getSegmentColorClass(wallet.segment, true);
+      const formattedScore = String(wallet.rfmScore).padStart(3, '0');
+      
+      html += `
+        <tr>
+          <td class="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">${wallet.wallet}</td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${wallet.discordUsername || ''}</td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${wallet.recency}</td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${wallet.frequency}</td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">$${wallet.monetary.toLocaleString()}</td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">${formattedScore}</td>
+          <td class="px-6 py-4 whitespace-nowrap">
+            <span class="px-2 py-1 text-xs rounded-full ${segmentClass}">
+              ${wallet.segment}
+            </span>
+          </td>
+        </tr>
+      `;
+    });
+    
+    html += `
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+    
     // Add Quantile Cut Offs table
     html += `
       <div class="mt-12">
-        <h2 class="text-lg font-semibold mb-4">Quantile Cut Offs</h2>
+        <h2 class="text-lg font-semibold mb-4">Quantile Cut Offs</h2>"
         <div class="overflow-x-auto">
           <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
