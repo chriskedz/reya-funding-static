@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>XP Simulator</title>
+<style>
+  :root{
+    --primary:#2563eb;
+    --bg:#f3f4f6;
+    --card:#ffffff;
+    --border:#e5e7eb;
+    --text:#111827;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans",sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    line-height:1.4;
+  }
+  h1,h2{margin:0 0 1rem 0;font-weight:600}
+  h1{font-size:1.75rem}
+  h2{font-size:1.25rem}
+  .container{
+    max-width:1200px;
+    margin:auto;
+    padding:1.5rem;
+  }
+  .card{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:0.75rem;
+    padding:1.5rem;
+    margin-bottom:1.5rem;
+    box-shadow:0 1px 3px rgba(0,0,0,.05);
+  }
+  .grid{
+    display:grid;
+    gap:1rem;
+  }
+  .grid-2{grid-template-columns:repeat(auto-fit,minmax(250px,1fr))}
+  label{display:block;font-size:.875rem;margin-bottom:.25rem}
+  input,select{
+    width:100%;
+    padding:.5rem .75rem;
+    border:1px solid var(--border);
+    border-radius:.5rem;
+    font:inherit;
+    background:#fff;
+  }
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button{margin:0}
+  .btn{
+    display:inline-block;
+    background:var(--primary);
+    color:#fff;
+    border:none;
+    padding:.5rem 1rem;
+    border-radius:.5rem;
+    cursor:pointer;
+    font-weight:600;
+    transition:background .15s;
+  }
+  .btn:hover{background:#1e4ed8}
+  .result{
+    margin-top:1rem;
+    padding:.75rem 1rem;
+    background:#f9fafb;
+    border:1px dashed var(--border);
+    border-radius:.5rem;
+    font-size:.95rem;
+  }
+  .switch{
+    display:flex;
+    align-items:center;
+    gap:.5rem;
+    margin:0;
+  }
+</style>
+</head>
+<body>
+  <div class="container">
+    <h1>XP Simulator</h1>
+
+    <!-- Global Settings -->
+    <div class="card">
+      <h2>1&nbsp;&mdash;&nbsp;Account Settings</h2>
+      <div class="grid grid-2">
+        <div>
+          <label for="tier">Account&nbsp;Tier</label>
+          <select id="tier">
+            <option value="0">Tier&nbsp;0</option>
+            <option value="1">Tier&nbsp;1</option>
+            <option value="2">Tier&nbsp;2</option>
+            <option value="3">Tier&nbsp;3</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div class="switch">
+          <input type="checkbox" id="applyReferral" />
+          <label for="applyReferral">Generate 10 % referral bonus for a referrer</label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Trading XP -->
+    <div class="card">
+      <h2>2&nbsp;&mdash;&nbsp;Trading&nbsp;XP</h2>
+      <div class="grid grid-2">
+        <div>
+          <label for="tradeVol">Trading&nbsp;Volume&nbsp;($)</label>
+          <input type="number" id="tradeVol" min="0" step="0.01" placeholder="e.g. 25 000">
+        </div>
+        <div style="align-self:end">
+          <button class="btn" id="calcTrade">Calculate</button>
+        </div>
+      </div>
+      <div class="result" id="tradeResult" hidden></div>
+    </div>
+
+    <!-- Open Interest XP -->
+    <div class="card">
+      <h2>3&nbsp;&mdash;&nbsp;Open&nbsp;Interest&nbsp;XP</h2>
+      <div class="grid grid-2">
+        <div>
+          <label for="oiValue">Open&nbsp;Interest&nbsp;Value&nbsp;($)</label>
+          <input type="number" id="oiValue" min="0" step="0.01" placeholder="e.g. 50 000">
+        </div>
+        <div>
+          <label for="oiMinutes">Duration&nbsp;(minutes)</label>
+          <input type="number" id="oiMinutes" min="0" step="1" placeholder="e.g. 120">
+        </div>
+        <div style="align-self:end">
+          <button class="btn" id="calcOi">Calculate</button>
+        </div>
+      </div>
+      <div class="result" id="oiResult" hidden></div>
+    </div>
+
+    <!-- Staking XP -->
+    <div class="card">
+      <h2>4&nbsp;&mdash;&nbsp;Staking&nbsp;XP</h2>
+      <div class="grid grid-2">
+        <div>
+          <label for="marginStake">Margin&nbsp;Account&nbsp;Stake&nbsp;($)</label>
+          <input type="number" id="marginStake" min="0" step="0.01" placeholder="e.g. 12 000">
+        </div>
+        <div>
+          <label for="walletStake">Wallet&nbsp;Stake&nbsp;($)</label>
+          <input type="number" id="walletStake" min="0" step="0.01" placeholder="e.g. 5 000">
+        </div>
+        <div>
+          <label for="stakeMinutes">Duration&nbsp;(minutes)</label>
+          <input type="number" id="stakeMinutes" min="0" step="1" placeholder="e.g. 10 080">
+        </div>
+        <div>
+          <label for="consecDays">Consecutive&nbsp;Staking&nbsp;Days</label>
+          <input type="number" id="consecDays" min="0" step="1" placeholder="e.g. 21">
+        </div>
+        <div class="switch">
+          <input type="checkbox" id="unstakedFlag" />
+          <label for="unstakedFlag">Unstaked during period</label>
+        </div>
+        <div style="align-self:end">
+          <button class="btn" id="calcStake">Calculate</button>
+        </div>
+      </div>
+      <div class="result" id="stakeResult" hidden></div>
+    </div>
+  </div>
+
+<script>
+/* ---------- Helpers ---------- */
+function getTierMultiplier(tier){
+  if(tier==='0') return 1.1;
+  if(tier==='1'||tier==='2'||tier==='3') return 1.2;
+  return 1;
+}
+function format(n){
+  return Intl.NumberFormat('en-US',{maximumFractionDigits:2}).format(n);
+}
+function maybeReferral(xp,withReferral){
+  return withReferral?xp*0.1:0;
+}
+
+/* ---------- Trading ---------- */
+document.getElementById('calcTrade').addEventListener('click',()=>{
+  const vol=parseFloat(document.getElementById('tradeVol').value)||0;
+  const tier=document.getElementById('tier').value;
+  const withRef=document.getElementById('applyReferral').checked;
+
+  const baseXp=vol/2;
+  const tierXp=baseXp*getTierMultiplier(tier);
+  const refXp=maybeReferral(tierXp,withRef);
+
+  const resultEl=document.getElementById('tradeResult');
+  resultEl.innerHTML=`
+    <strong>Your Trading&nbsp;XP:</strong> ${format(tierXp)}<br>
+    ${withRef?`<strong>Referrer&nbsp;Bonus:</strong> ${format(refXp)}`:''}
+  `;
+  resultEl.hidden=false;
+});
+
+/* ---------- Open Interest ---------- */
+document.getElementById('calcOi').addEventListener('click',()=>{
+  const value=parseFloat(document.getElementById('oiValue').value)||0;
+  const minutes=parseFloat(document.getElementById('oiMinutes').value)||0;
+  const tier=document.getElementById('tier').value;
+  const withRef=document.getElementById('applyReferral').checked;
+
+  const seconds=minutes*60;
+  const baseXp=(value*seconds)/(1000*60);
+  const tierXp=baseXp*getTierMultiplier(tier);
+  const refXp=maybeReferral(tierXp,withRef);
+
+  const resultEl=document.getElementById('oiResult');
+  resultEl.innerHTML=`
+    <strong>Your OI&nbsp;XP:</strong> ${format(tierXp)}<br>
+    ${withRef?`<strong>Referrer&nbsp;Bonus:</strong> ${format(refXp)}`:''}
+  `;
+  resultEl.hidden=false;
+});
+
+/* ---------- Staking ---------- */
+function calcLoyaltyBoost(days,unstaked){
+  if(unstaked) return 1;
+  return Math.min(1+Math.floor(days/7),5);
+}
+document.getElementById('calcStake').addEventListener('click',()=>{
+  const marginBal=parseFloat(document.getElementById('marginStake').value)||0;
+  const walletBal=parseFloat(document.getElementById('walletStake').value)||0;
+  const minutes=parseFloat(document.getElementById('stakeMinutes').value)||0;
+  const days=parseFloat(document.getElementById('consecDays').value)||0;
+  const unstaked=document.getElementById('unstakedFlag').checked;
+  const tier=document.getElementById('tier').value;
+  const withRef=document.getElementById('applyReferral').checked;
+
+  const loyaltyBoost=calcLoyaltyBoost(days,unstaked);
+  const seconds=minutes*60;
+  const baseXp=((marginBal*(loyaltyBoost+3))+(walletBal*loyaltyBoost))*seconds/(1000*60);
+  const tierXp=baseXp*getTierMultiplier(tier);
+  const refXp=maybeReferral(tierXp,withRef);
+
+  const resultEl=document.getElementById('stakeResult');
+  resultEl.innerHTML=`
+    <strong>Loyalty&nbsp;Boost:</strong> ${format(loyaltyBoost)}x<br>
+    <strong>Your Staking&nbsp;XP:</strong> ${format(tierXp)}<br>
+    ${withRef?`<strong>Referrer&nbsp;Bonus:</strong> ${format(refXp)}`:''}
+  `;
+  resultEl.hidden=false;
+});
+</script>
+</body>
+</html>

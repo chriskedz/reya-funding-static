@@ -123,6 +123,16 @@
                 </div>
             </div>
             
+            <!-- DEX Comparison Table -->
+            <div>
+                <h2 class="text-lg font-semibold text-gray-700 mb-3">DEX Comparison</h2>
+                <div class="overflow-x-auto -mx-2 sm:mx-0 mb-8">
+                    <div class="min-w-[600px] px-2 sm:min-w-0 sm:px-0">
+                        <div id="dexComparisonTable"></div>
+                    </div>
+                </div>
+            </div>
+
             <section>
                 <h2 class="text-lg font-semibold text-gray-700 mb-3">All Markets</h2>
                 <div class="overflow-x-auto -mx-2 sm:mx-0">
@@ -338,6 +348,7 @@
 
                     cachedData = all;
                     renderTables();
+                    renderDexComparisonTable();
                     updateLastUpdated();
                     setConn('ok');
                 } catch (err) {
@@ -672,7 +683,7 @@
                         sortButtonDown: 'text-gray-400 hover:text-gray-600',
                         sortButtonNone: 'text-gray-300 hover:text-gray-400',
                         loading: 'p-4 text-center text-gray-500',
-                        notfound: 'p-4 text-center text-gray-500',
+                        noResults: 'p-4 text-center text-gray-500',
                     },
                     style: {
                         table: {
@@ -851,6 +862,153 @@
                     console.error('Error initializing Funding Arb table:', error);
                 }
             }
+
+            async function fetchDexComparisonData() {
+                const dexData = [];
+                
+                try {
+                    // Reya data (from existing cachedData)
+                    if (cachedData) {
+                        const totalVolume = cachedData.reduce((sum, market) => sum + (market.volume24H || 0), 0);
+                        const totalOI = cachedData.reduce((sum, market) => {
+                            const longOI = (market.longOI || 0) * (market.markPrice || 1);
+                            const shortOI = (market.shortOI || 0) * (market.markPrice || 1);
+                            return sum + longOI + shortOI;
+                        }, 0);
+                        
+                        dexData.push(['Reya', formatUsd(totalVolume, 0), formatUsd(totalOI, 0)]);
+                    }
+                    
+                    // Hyperliquid data
+                    try {
+                        const hlResponse = await fetch('https://api.hyperliquid.xyz/info', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ type: 'metaAndAssetCtxs' })
+                        });
+                        
+                        if (hlResponse.ok) {
+                            const [meta, assetCtxs] = await hlResponse.json();
+                            let hlTotalVolume = 0;
+                            let hlTotalOI = 0;
+                            
+                            meta.universe.forEach((asset, i) => {
+                                const ctx = assetCtxs[i];
+                                if (ctx) {
+                                    hlTotalVolume += parseFloat(ctx.dayNtlVlm || 0);
+                                    hlTotalOI += parseFloat(ctx.openInterest || 0);
+                                }
+                            });
+                            
+                            dexData.push(['Hyperliquid', formatUsd(hlTotalVolume, 0), formatUsd(hlTotalOI, 0)]);
+                        }
+                    } catch (error) {
+                        console.error('Error fetching Hyperliquid data:', error);
+                        dexData.push(['Hyperliquid', 'N/A', 'N/A']);
+                    }
+                    
+                    // Lighter data
+                    try {
+                        const lighterResponse = await fetch('https://lightlens.zeabur.app/summary');
+                        
+                        if (lighterResponse.ok) {
+                            const lighterData = await lighterResponse.json();
+                            let lighterVolume = 'N/A';
+                            let lighterOI = 'N/A';
+                            
+                            // Find volume and OI from the summary data
+                            lighterData.forEach(item => {
+                                if (item.title === 'Total daily volume') {
+                                    lighterVolume = formatUsd(item.value, 0);
+                                }
+                                if (item.title === 'Total open interest') {
+                                    lighterOI = formatUsd(item.value, 0);
+                                }
+                            });
+                            
+                            dexData.push(['Lighter', lighterVolume, lighterOI]);
+                        }
+                    } catch (error) {
+                        console.error('Error fetching Lighter data:', error);
+                        dexData.push(['Lighter', 'N/A', 'N/A']);
+                    }
+                    
+                } catch (error) {
+                    console.error('Error in fetchDexComparisonData:', error);
+                }
+                
+                return dexData;
+            }
+
+            async function renderDexComparisonTable() {
+                const dexData = await fetchDexComparisonData();
+                
+                if (window.dexComparisonGrid) {
+                    window.dexComparisonGrid.destroy();
+                }
+                
+                window.dexComparisonGrid = new gridjs.Grid({
+                    columns: [
+                        {
+                            name: 'DEX',
+                            width: '33%',
+                            attributes: (cell) => ({ 
+                                style: 'padding: 0.75rem; font-size: 0.875rem; font-weight: 500;', 
+                                class: 'cursor-pointer hover:bg-gray-50' 
+                            })
+                        },
+                        {
+                            name: 'Total 24h Volume',
+                            width: '33%',
+                            formatter: (cell) => gridjs.html(`<div class="text-right font-medium">${cell}</div>`),
+                            attributes: (cell) => ({ 
+                                style: 'padding: 0.75rem; font-size: 0.875rem; text-align: right;', 
+                                class: 'cursor-pointer hover:bg-gray-50' 
+                            })
+                        },
+                        {
+                            name: 'Total OI ($)',
+                            width: '33%',
+                            formatter: (cell) => gridjs.html(`<div class="text-right font-medium">${cell}</div>`),
+                            attributes: (cell) => ({ 
+                                style: 'padding: 0.75rem; font-size: 0.875rem; text-align: right;', 
+                                class: 'cursor-pointer hover:bg-gray-50' 
+                            })
+                        }
+                    ],
+                    data: dexData,
+                    sort: false,
+                    search: false,
+                    pagination: false,
+                    style: {
+                        table: {
+                            border: '1px solid #e5e7eb',
+                            borderRadius: '0.5rem',
+                            overflow: 'hidden',
+                            backgroundColor: 'white',
+                            boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
+                            width: '100%',
+                            tableLayout: 'auto'
+                        },
+                        th: {
+                            padding: '0.75rem',
+                            fontSize: '0.75rem',
+                            fontWeight: '600',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.05em',
+                            borderBottom: '1px solid #e5e7eb',
+                            backgroundColor: '#f9fafb',
+                            textAlign: 'left'
+                        },
+                        td: {
+                            padding: '0.75rem',
+                            fontSize: '0.875rem',
+                            borderBottom: '1px solid #f3f4f6'
+                        }
+                    }
+                }).render(document.getElementById('dexComparisonTable'));
+            }
+
             function updateSimIcons() {
                 if (simulationMode) {
                     simDollarIcon.classList.add('text-blue-600');
@@ -953,6 +1111,7 @@
             
             fetchAndRender();
             updateAutoRefreshText();
+            renderDexComparisonTable();
         })();
     </script>
 </body>
