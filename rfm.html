@@ -1,0 +1,1446 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-gray-50">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Perp-DEX RFM & Churn Analyzer</title>
+
+<!-- Tailwind -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+
+<!-- Icons -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@iconscout/unicons@3.0.6/css/line.css">
+
+<!-- Papa Parse CSS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/papaparse@5.5.3/player/player.min.css">
+
+<!-- Papa Parse JS -->
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.5.3/papaparse.min.js">
+  // This script will be loaded synchronously
+</script>
+
+<!-- Dropzone CSS -->
+<link rel="stylesheet" href="https://unpkg.com/dropzone@5/dist/min/dropzone.min.css" type="text/css" />
+
+<!-- Dropzone JS -->
+<script src="https://unpkg.com/dropzone@5/dist/min/dropzone.min.js"></script>
+
+<!-- Verify Papa Parse is loaded -->
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    if (window.Papa) {
+      console.log('Papa Parse loaded successfully', window.Papa);
+      // Make sure Papa is available globally
+      window.Papa = window.Papa || Papa;
+    } else {
+      console.error('Papa Parse failed to load!');
+      // Try loading it again as a fallback
+      const script = document.createElement('script');
+      script.src = 'https://cdn.jsdelivr.net/npm/papaparse@5.5.3/papaparse.min.js';
+      script.onload = function() {
+        console.log('Papa Parse loaded successfully on second attempt');
+        window.Papa = window.Papa || Papa;
+      };
+      script.onerror = function() {
+        console.error('Failed to load Papa Parse on second attempt');
+      };
+      document.head.appendChild(script);
+    }
+  });
+  
+  // Add tooltip functionality
+  function initTooltips() {
+    const tooltips = document.querySelectorAll('.tooltip');
+    tooltips.forEach(tooltip => {
+      tooltip.addEventListener('mouseenter', function() {
+        const tooltipContent = this.querySelector('.tooltip-content');
+        if (tooltipContent) {
+          tooltipContent.classList.remove('hidden');
+        }
+      });
+      tooltip.addEventListener('mouseleave', function() {
+        const tooltipContent = this.querySelector('.tooltip-content');
+        if (tooltipContent) {
+          tooltipContent.classList.add('hidden');
+        }
+      });
+    });
+  }
+  
+  // Initialize tooltips when DOM is loaded
+  document.addEventListener('DOMContentLoaded', initTooltips);
+  
+  // Re-initialize tooltips after dynamic content is loaded
+  function onContentUpdated() {
+    initTooltips();
+  }
+</script>
+
+<style>
+  /* Dropzone styles */
+  .dropzone {
+    border: 2px dashed #9CA3AF;
+    border-radius: 0.5rem;
+    padding: 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: #F9FAFB;
+  }
+
+  .dropzone:hover, .dropzone.dz-drag-hover {
+    background-color: #EFF6FF;
+    border-color: #3B82F6;
+  }
+
+  .dz-message {
+    margin: 0;
+    padding: 1rem;
+    color: #6B7280;
+  }
+
+  .dz-preview {
+    margin: 0.5rem;
+  }
+
+  .dz-success-mark, .dz-error-mark {
+    display: none;
+  }
+  body.drag-active {
+    background-color: #f0f9ff;
+  }
+</style>
+</head>
+
+<body class="h-full flex flex-col text-gray-900">
+<header class="bg-white shadow-sm">
+  <div class="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8 flex items-center gap-3">
+    <h1 class="text-xl font-semibold">Perp-DEX RFM & Churn Analyzer</h1>
+  </div>
+</header>
+
+<main class="flex-grow overflow-y-auto">
+  <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 space-y-8">
+    <section class="bg-white shadow-sm ring-1 ring-gray-200 rounded-xl p-6 space-y-6">
+      <h2 class="text-lg font-medium flex items-center gap-2">
+        <span id="iSettings"></span>Configuration
+      </h2>
+
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+        <div>
+          <label for="refDate" class="block text-sm font-medium text-gray-700">Reference date</label>
+          <div class="mt-1">
+            <input type="date" name="refDate" id="refDate" value="2025-06-19" 
+                   class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
+          </div>
+        </div>
+        <div>
+          <label for="churnDays" class="block text-sm font-medium text-gray-700">Churn after ≥ (days)</label>
+          <div class="mt-1">
+            <input type="number" name="churnDays" id="churnDays" min="1" value="30"
+                   class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
+          </div>
+        </div>
+        <div>
+          <label for="hiPct" class="block text-sm font-medium text-gray-700">High-value percentile</label>
+          <div class="mt-1">
+            <input type="number" name="hiPct" id="hiPct" min="50" max="100" value="75"
+                   class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
+          </div>
+        </div>
+      </div>
+
+      <!-- Drop Zone -->
+      <div class="space-y-4">
+        <div id="dropZone" class="dropzone">
+          <div class="dz-message" data-dz-message>
+            <div class="space-y-2">
+              <svg class="mx-auto h-12 w-12 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+              </svg>
+              <p class="text-indigo-700 font-medium">Drop your CSV file here</p>
+              <p class="text-sm text-indigo-500">or click to browse files</p>
+              <p class="text-xs text-gray-400">CSV files only (Max 10MB)</p>
+            </div>
+          </div>
+        </div>
+        <div id="fileStatus" class="text-sm text-gray-600">
+          No file chosen
+        </div>
+      </div>
+
+      <button id="runBtn"
+              class="inline-flex gap-2 items-center rounded-md bg-indigo-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-xs hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-40 disabled:cursor-not-allowed"
+              disabled>
+        <span id="iPlay"></span>Calculate
+      </button>
+    </section>
+
+    <section id="resultSection" class="hidden space-y-8">
+      <div id="summaryCards" class="grid grid-cols-2 sm:grid-cols-4 gap-4"></div>
+      <div id="rfmTable" class="space-y-8"></div>
+    </section>
+  </div>
+</main>
+
+<script>
+// State
+let ready = false;
+let parsedRows = [];
+
+// Initialize Icons when they're loaded
+document.addEventListener('icons:loaded', function() {
+  try {
+    const iSettings = document.getElementById('iSettings');
+    const iUpload = document.getElementById('iUpload');
+    const iPlay = document.getElementById('iPlay');
+    
+    if (iSettings && window.Icons?.Settings) iSettings.appendChild(window.Icons.Settings({class:'w-5 h-5'}));
+    if (iUpload && window.Icons?.FileUp) iUpload.appendChild(window.Icons.FileUp({class:'w-8 h-8 stroke-indigo-500'}));
+    if (iPlay && window.Icons?.PlayCircle) iPlay.appendChild(window.Icons.PlayCircle({class:'w-5 h-5'}));
+    
+    console.log('Icons initialized');
+  } catch (error) {
+    console.error('Error initializing icons:', error);
+  }
+});
+
+// Also try to initialize on window load as a fallback
+window.addEventListener('load', function() {
+  if (window.Icons) {
+    document.dispatchEvent(new Event('icons:loaded'));
+  }
+});
+
+// Elements
+let runBtn;
+let fileStatus;
+
+// Initialize when DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+  runBtn = document.getElementById('runBtn');
+  fileStatus = document.getElementById('fileStatus');
+  
+  if (!runBtn || !fileStatus) {
+    console.error('Required elements not found');
+    return;
+  }
+  
+  // Disable default file drag and drop behavior
+  function preventDefaults(e) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+  
+  ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+    document.addEventListener(eventName, preventDefaults, false);
+    document.body.addEventListener(eventName, preventDefaults, false);
+  });
+  
+  // Initialize Dropzone
+  Dropzone.autoDiscover = false;
+  
+  // Remove any existing dropzone instances
+  if (window.Dropzone && Dropzone.instances && Dropzone.instances.length > 0) {
+    Dropzone.instances.forEach(instance => {
+      try { instance.destroy(); } catch(e) { console.error('Error destroying instance:', e); }
+    });
+  }
+  
+  // Track if we have a valid file
+  let hasValidFile = false;
+  
+  // Create the dropzone instance
+  window.myDropzone = new Dropzone("#dropZone", {
+    url: '/file-upload', // Required but not used
+    autoProcessQueue: false,
+    uploadMultiple: false,
+    maxFiles: 1,
+    maxFilesize: 10, // MB
+    acceptedFiles: '.csv,text/csv',
+    addRemoveLinks: true,
+    previewsContainer: false,
+    createImageThumbnails: false,
+    clickable: true,
+    preventMultipleFiles: true,
+    autoQueue: false,
+    dictDefaultMessage: `
+      <div class="space-y-2">
+        <svg class="mx-auto h-12 w-12 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+        </svg>
+        <p class="text-indigo-700 font-medium">Drop your CSV file here</p>
+        <p class="text-sm text-indigo-500">or click to browse files</p>
+        <p class="text-xs text-gray-400">CSV files only (Max 10MB)</p>
+      </div>
+    `,
+    dictFallbackMessage: 'Your browser does not support drag and drop file uploads.',
+    dictFileTooBig: 'File is too big ({{filesize}}MiB). Max filesize: {{maxFilesize}}MiB.',
+    dictInvalidFileType: 'Please upload a valid CSV file.',
+    dictResponseError: 'Server responded with {{statusCode}} code.',
+    dictCancelUpload: 'Cancel upload',
+    dictUploadCanceled: 'Upload canceled.',
+    dictRemoveFile: 'Remove file',
+    dictMaxFilesExceeded: 'You can only upload one file at a time.',
+    init: function() {
+      const dropzone = this;
+      
+      // Handle drag and drop visual feedback
+      this.on('dragenter', function() {
+        this.element.classList.add('dz-drag-hover');
+      });
+      
+      this.on('dragleave', function() {
+        this.element.classList.remove('dz-drag-hover');
+      });
+      
+      this.on('drop', function() {
+        this.element.classList.remove('dz-drag-hover');
+      });
+      
+      // When a file is added
+      this.on('addedfile', function(file) {
+        // Remove any existing files
+        if (this.files.length > 1) {
+          this.removeFile(this.files[0]);
+          return;
+        }
+        
+        hasValidFile = true;
+        ready = true;
+        runBtn.disabled = false;
+        runBtn.classList.remove('opacity-40', 'cursor-not-allowed');
+        fileStatus.textContent = `✅ ${file.name} ready`;
+        fileStatus.className = 'text-sm text-green-600';
+      });
+      
+      // When a file is removed
+      this.on('removedfile', function(file) {
+        hasValidFile = false;
+        ready = false;
+        runBtn.disabled = true;
+        runBtn.classList.add('opacity-40', 'cursor-not-allowed');
+        fileStatus.textContent = 'No file chosen';
+        fileStatus.className = 'text-sm text-gray-600';
+      });
+    },
+  
+    // Customize the preview template
+    previewTemplate: `
+      <div class="dz-preview dz-file-preview">
+        <div class="dz-details">
+          <div class="dz-filename"><span data-dz-name></span></div>
+          <div class="dz-size" data-dz-size></div>
+          <div class="dz-progress"><span class="dz-upload" data-dz-uploadprogress></span></div>
+          <div class="dz-success-mark dz-success-mark-check"></div>
+          <div class="dz-error-mark dz-error-mark-cross"></div>
+        </div>
+        <div class="dz-error-message"><span data-dz-errormessage></span></div>
+      </div>
+    `,
+  
+    // When a file is added
+    addedfile: function(file) {
+      console.log('File added:', file.name);
+      
+      // If more than one file, remove the old one
+      if (this.files.length > 1) {
+        console.log('Removing previous file');
+        this.removeFile(this.files[0]);
+        return; // The remaining code will run again for the new file
+      }
+      
+      // Update status
+      fileStatus.textContent = `Processing ${file.name}...`;
+      fileStatus.className = 'text-sm text-blue-600';
+      
+      // Show processing state in the preview
+      const previewElement = file.previewElement;
+      const progressBar = previewElement?.querySelector('[data-dz-uploadprogress]');
+      if (progressBar) {
+        progressBar.style.width = '100%';
+        progressBar.classList.remove('bg-green-500', 'bg-red-500');
+        progressBar.classList.add('bg-blue-400');
+      }
+      
+      // Disable run button until processing is complete
+      const runBtn = document.getElementById('runBtn');
+      if (runBtn) {
+        runBtn.disabled = true;
+        runBtn.classList.add('opacity-50', 'cursor-not-allowed');
+        runBtn.classList.remove('hover:bg-indigo-500');
+      }
+      
+      ready = false;
+      console.log('Button state after file add - disabled:', runBtn?.disabled, 'ready:', ready);
+    
+      // Read the file
+      const reader = new FileReader();
+      
+      reader.onload = function(e) {
+        console.log('File read successfully, parsing CSV...');
+        try {
+          const parser = window.Papa || Papa;
+          if (!parser) {
+            throw new Error('Papa Parse is not available');
+          }
+          
+          console.log('Using Papa Parse version:', parser.SCRIPT_PATH || 'unknown');
+          
+          // Parse CSV with PapaParse
+          parser.parse(file, {
+            header: true,
+            dynamicTyping: true,
+            skipEmptyLines: true,
+            complete: function(results) {
+              console.log('CSV parse complete, rows:', results.data.length);
+              parsedRows = results.data;
+              if (parsedRows.length === 0) {
+                fileStatus.textContent = '❌ CSV is empty or invalid';
+                myDropzone.removeFile(file);
+                return;
+              }
+              
+              // Update UI
+              fileStatus.textContent = `✅ Loaded ${file.name} (${parsedRows.length} rows)`;
+              ready = true;
+              runBtn.disabled = false;
+              runBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+              runBtn.classList.add('hover:bg-indigo-500');
+              
+              // Debug info
+              console.log('File loaded successfully');
+              console.log('- Rows parsed:', parsedRows.length);
+              console.log('- Button disabled:', runBtn.disabled);
+              console.log('- Button classes:', runBtn.className);
+              console.log('- Ready state:', ready);
+              
+              // Force UI update
+              runBtn.style.display = 'none';
+              runBtn.offsetHeight; // Trigger reflow
+              runBtn.style.display = '';
+            },
+            error: function(error) {
+              console.error('Error parsing CSV:', error);
+              fileStatus.textContent = '❌ Error parsing CSV file';
+              myDropzone.removeFile(file);
+              runBtn.disabled = true;
+              runBtn.classList.add('opacity-50', 'cursor-not-allowed');
+              runBtn.classList.remove('hover:bg-indigo-500');
+            }
+          });
+        } catch (error) {
+          console.error('Error processing file:', error);
+          fileStatus.textContent = '❌ Error processing file';
+          myDropzone.removeFile(file);
+          runBtn.disabled = true;
+          runBtn.classList.add('opacity-50', 'cursor-not-allowed');
+          runBtn.classList.remove('hover:bg-indigo-500');
+        }
+      };
+      
+      reader.onerror = function() {
+        console.error('Error reading file');
+        fileStatus.textContent = '❌ Error reading file';
+        myDropzone.removeFile(file);
+        runBtn.disabled = true;
+        runBtn.classList.add('opacity-50', 'cursor-not-allowed');
+        runBtn.classList.remove('hover:bg-indigo-500');
+      };
+      
+      reader.readAsText(file);
+    },
+    
+    // When a file is removed
+    removedfile: function(file) {
+      fileStatus.textContent = 'Drop a CSV file here or click to upload';
+      fileStatus.className = 'text-sm text-gray-600';
+      
+      // Reset run button
+      const runBtn = document.getElementById('runBtn');
+      if (runBtn) {
+        runBtn.disabled = true;
+        runBtn.classList.add('opacity-50', 'cursor-not-allowed');
+        runBtn.classList.remove('hover:bg-indigo-500');
+      }
+      
+      // Reset state
+      ready = false;
+      parsedRows = [];
+      
+      ready = false;
+      parsedRows = [];
+      currentFile = null;
+    },
+    
+    // Error handling
+    error: function(file, message) {
+      if (fileStatus) {
+        fileStatus.textContent = `❌ ${message}`;
+      }
+      this.removeFile(file);
+    }
+  });
+
+  // Function to load file programmatically (if needed)
+  function loadFile(file) {
+    if (!file) return;
+    
+    // Create a mock file object for Dropzone
+    const mockFile = { name: file.name, size: file.size, type: file.type };
+    
+    // Add the file to Dropzone
+    myDropzone.addFile(file);
+  }
+
+  // Helper functions
+  function q(a, q) {
+    if (q) {
+      return Array.from(document.querySelectorAll(a));
+    } else {
+      return document.querySelector(a);
+    }
+  }
+
+  function csv(data, filename) {
+    const csvData = Papa.unparse(data);
+    const blob = new Blob(["\uFEFF" + csvData], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename || 'export.csv';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }
+
+  // Run button click handler
+  runBtn.addEventListener('click', function() {
+    if (!ready || !window.myDropzone || window.myDropzone.files.length === 0) {
+      console.log('Button disabled - ready:', ready, 'has files:', window.myDropzone?.files?.length || 0);
+      return;
+    }
+    
+    const refDate = new Date(document.getElementById('refDate').value);
+    const churnDays = parseInt(document.getElementById('churnDays').value) || 30;
+    const hiPct = parseInt(document.getElementById('hiPct').value) || 75;
+    
+    document.getElementById('resultSection').classList.remove('hidden');
+    processRFM(parsedRows, refDate, churnDays, hiPct);
+  });
+
+  function processRFM(rows, refDate, churnDays, hiPct) {
+    console.log('Starting RFM analysis...');
+    
+    // Show results section
+    const resultSection = document.getElementById('resultSection');
+    resultSection.classList.remove('hidden');
+    
+    // Initialize summary cards container
+    const summaryCards = document.getElementById('summaryCards');
+    summaryCards.innerHTML = `
+      <div class="bg-white p-4 rounded-lg shadow">
+        <h3 class="font-medium text-gray-500">Total Wallets</h3>
+        <p class="text-2xl font-semibold" id="totalWallets">0</p>
+      </div>
+      <div class="bg-white p-4 rounded-lg shadow">
+        <h3 class="font-medium text-gray-500">Champions</h3>
+        <p class="text-2xl font-semibold text-green-600" id="championsWallets">0</p>
+      </div>
+      <div class="bg-white p-4 rounded-lg shadow">
+        <h3 class="font-medium text-gray-500">At Risk</h3>
+        <p class="text-2xl font-semibold text-amber-600" id="atRiskWallets">0</p>
+      </div>
+      <div class="bg-white p-4 rounded-lg shadow">
+        <h3 class="font-medium text-gray-500">Churn Targets</h3>
+        <p class="text-2xl font-semibold text-red-600" id="churnedWallets">0</p>
+      </div>
+      <div class="bg-white p-4 rounded-lg shadow">
+        <h3 class="font-medium text-gray-500">Top Segment by Volume</h3>
+        <p class="text-2xl font-semibold text-indigo-600" id="topSegmentVolume">-</p>
+      </div>
+    `;
+    
+    try {
+      // First validate the CSV structure
+      validateCSV(rows);
+      
+      // Process RFM data
+      const walletData = {};
+      const tradingDaysByWallet = {}; // Track trading days per wallet
+      
+      console.log('CSV Data Analysis:');
+      console.log('Total rows:', rows.length);
+      console.log('First row keys:', Object.keys(rows[0] || {}));
+      
+      // Use the actual column names from the CSV
+      const walletKey = 'wallet_address';
+      const dateKey = 'day';
+      const amountKey = 'SUM(amount)';
+      
+      console.log('Using columns:', { walletKey, dateKey, amountKey });
+      
+      // Process each row
+      rows.forEach((row, index) => {
+        const wallet = row[walletKey] || `unknown_${index}`;
+        const dateStr = row[dateKey];
+        const amountStr = row[amountKey] || '0';
+        
+        if (!walletData[wallet]) {
+          walletData[wallet] = {
+            recency: 0, // days since last trade
+            frequency: 0, // trading days
+            monetary: 0, // total notional traded (USD)
+            lastSeen: null,
+            firstSeen: null,
+            tradeDates: new Set() // track unique trading days
+          };
+          tradingDaysByWallet[wallet] = new Set();
+        }
+        
+        // Parse date
+        let date = null;
+        if (dateStr) {
+          // Handle different date formats
+          if (typeof dateStr === 'string') {
+            // Try parsing ISO format first
+            date = new Date(dateStr);
+            
+            // If invalid, try parsing as timestamp (seconds or milliseconds)
+            if (isNaN(date.getTime())) {
+              const timestamp = parseFloat(dateStr);
+              if (!isNaN(timestamp)) {
+                // Assume milliseconds if > 1e12, otherwise seconds
+                date = new Date(timestamp > 1e12 ? timestamp : timestamp * 1000);
+              }
+            }
+          } else if (dateStr.getTime) {
+            // Already a Date object
+            date = new Date(dateStr);
+          }
+        }
+        
+        // Parse amount
+        let amount = 0;
+        if (amountStr) {
+          if (typeof amountStr === 'string') {
+            // Remove any non-numeric characters except decimal point and minus
+            const cleanAmount = amountStr.replace(/[^0-9.-]+/g, '');
+            amount = Math.abs(parseFloat(cleanAmount) || 0);
+          } else if (typeof amountStr === 'number') {
+            amount = Math.abs(amountStr);
+          }
+        }
+        
+        // Debug first few rows
+        if (index < 3) {
+          console.log(`Row ${index}:`, {
+            wallet,
+            dateStr,
+            parsedDate: date ? date.toISOString() : 'invalid',
+            amountStr,
+            parsedAmount: amount
+          });
+        }
+        
+        if (date && !isNaN(date.getTime())) {
+          // Track unique trading days (YYYY-MM-DD format)
+          const dateKey = date.toISOString().split('T')[0];
+          tradingDaysByWallet[wallet].add(dateKey);
+          
+          // Update recency (most recent date)
+          if (!walletData[wallet].lastSeen || date > walletData[wallet].lastSeen) {
+            walletData[wallet].lastSeen = date;
+            walletData[wallet].recency = Math.max(0, Math.floor((refDate - date) / (1000 * 60 * 60 * 24))); // days since last seen
+          }
+          
+          // Update first seen
+          if (!walletData[wallet].firstSeen || date < walletData[wallet].firstSeen) {
+            walletData[wallet].firstSeen = date;
+          }
+        } else if (index < 3) {
+          console.warn(`Invalid date in row ${index}:`, dateStr);
+        }
+        
+        // Update monetary (sum of all trades)
+        walletData[wallet].monetary += amount;
+      });
+      
+      // Convert to array and update frequency to use trading days
+      const wallets = Object.entries(walletData).map(([wallet, data]) => {
+        const frequency = tradingDaysByWallet[wallet]?.size || 0;
+        
+        // Debug wallet with no valid dates
+        if (frequency === 0 && (data.monetary > 0 || data.recency > 0)) {
+          console.warn('Wallet with no valid dates but has activity:', {
+            wallet,
+            ...data,
+            tradeDates: Array.from(tradingDaysByWallet[wallet] || [])
+          });
+        }
+        
+        return {
+          wallet,
+          ...data,
+          frequency,
+          recencyScore: 0,
+          frequencyScore: 0,
+          monetaryScore: 0,
+          rfmScore: 0,
+          segment: 'Others',
+          isChurned: false
+        };
+      });
+      
+      // Sort wallets by each metric for quintile calculation
+      const sortedByRecency = [...wallets].sort((a, b) => a.recency - b.recency);
+      const sortedByFrequency = [...wallets].sort((a, b) => b.frequency - a.frequency);
+      const sortedByMonetary = [...wallets].sort((a, b) => b.monetary - a.monetary);
+      
+      // Calculate quintile thresholds
+      const getQuintileThresholds = (sortedArray, getter, reverse = false) => {
+        const values = sortedArray.map(getter);
+        const quintileSize = Math.ceil(values.length / 5);
+        return [
+          values[0],
+          values[quintileSize * 1 - 1],
+          values[quintileSize * 2 - 1],
+          values[quintileSize * 3 - 1],
+          values[quintileSize * 4 - 1],
+          values[values.length - 1]
+        ];
+      };
+      
+      const recencyThresholds = getQuintileThresholds(sortedByRecency, w => w.recency);
+      const frequencyThresholds = getQuintileThresholds(sortedByFrequency, w => w.frequency, true);
+      const monetaryThresholds = getQuintileThresholds(sortedByMonetary, w => w.monetary, true);
+      
+      // Calculate quintile scores (1-5, 5 being best)
+      const getQuintileScore = (value, thresholds, reverse = false) => {
+        if (reverse) {
+          // For recency (lower is better)
+          if (value <= thresholds[1]) return 5;
+          if (value <= thresholds[2]) return 4;
+          if (value <= thresholds[3]) return 3;
+          if (value <= thresholds[4]) return 2;
+          return 1;
+        } else {
+          // For frequency and monetary (higher is better)
+          if (value >= thresholds[4]) return 5;
+          if (value >= thresholds[3]) return 4;
+          if (value >= thresholds[2]) return 3;
+          if (value >= thresholds[1]) return 2;
+          return 1;
+        }
+      };
+      
+      // Calculate 75th percentile for churn detection
+      const monetaryValues = wallets.map(w => w.monetary).sort((a, b) => a - b);
+      const frequencyValues = wallets.map(w => w.frequency).sort((a, b) => a - b);
+      const monetary75th = monetaryValues[Math.floor(monetaryValues.length * 0.75)] || 0;
+      const frequency75th = frequencyValues[Math.floor(frequencyValues.length * 0.75)] || 0;
+      
+      // Calculate scores and segments
+      wallets.forEach(wallet => {
+        // Calculate quintile scores
+        wallet.recencyScore = getQuintileScore(wallet.recency, recencyThresholds, true);
+        wallet.frequencyScore = getQuintileScore(wallet.frequency, frequencyThresholds);
+        wallet.monetaryScore = getQuintileScore(wallet.monetary, monetaryThresholds);
+        
+        // Calculate composite RFM score (R*100 + F*10 + M)
+        wallet.rfmScore = (wallet.recencyScore * 100) + (wallet.frequencyScore * 10) + wallet.monetaryScore;
+        
+        // Determine segment based on scores
+        if (wallet.recencyScore >= 4 && wallet.frequencyScore >= 4 && wallet.monetaryScore >= 4) {
+          wallet.segment = 'Champions';
+        } else if (wallet.recencyScore >= 3 && wallet.frequencyScore >= 4) {
+          wallet.segment = 'Loyal';
+        } else if (wallet.recencyScore >= 4 && wallet.frequencyScore <= 3) {
+          wallet.segment = 'Potential Loyalist';
+        } else if (wallet.recencyScore <= 2 && wallet.frequencyScore >= 4) {
+          wallet.segment = 'About-to-Sleep';
+        } else if (wallet.recencyScore === 3 && wallet.frequencyScore === 3) {
+          wallet.segment = 'Need Attention';
+        } else if (wallet.recencyScore <= 2) {
+          wallet.segment = 'At Risk';
+        } else {
+          wallet.segment = 'Others';
+        }
+        
+        // Mark churned wallets (30+ days inactive AND in top 25% by frequency or monetary)
+        wallet.isChurned = (wallet.recency >= 30) && 
+                          ((wallet.frequency >= frequency75th) || (wallet.monetary >= monetary75th));
+      });
+      
+      // Sort by RFM score (descending)
+      wallets.sort((a, b) => b.rfmScore - a.rfmScore);
+      
+      // Calculate segment statistics
+      const segmentStats = {};
+      wallets.forEach(wallet => {
+        if (!segmentStats[wallet.segment]) {
+          segmentStats[wallet.segment] = {
+            count: 0,
+            totalVolume: 0
+          };
+        }
+        segmentStats[wallet.segment].count++;
+        segmentStats[wallet.segment].totalVolume += wallet.monetary;
+      });
+      
+      // Find top segment by volume
+      let topSegment = '';
+      let maxVolume = 0;
+      for (const [segment, stats] of Object.entries(segmentStats)) {
+        if (stats.totalVolume > maxVolume) {
+          maxVolume = stats.totalVolume;
+          topSegment = segment;
+        }
+      }
+      
+      // Update summary cards
+      document.getElementById('totalWallets').textContent = wallets.length.toLocaleString();
+      document.getElementById('championsWallets').textContent = 
+        (segmentStats['Champions']?.count || 0).toLocaleString();
+      document.getElementById('atRiskWallets').textContent = 
+        (segmentStats['At Risk']?.count || 0).toLocaleString();
+      document.getElementById('churnedWallets').textContent = 
+        wallets.filter(w => w.isChurned).length.toLocaleString();
+      document.getElementById('topSegmentVolume').textContent = topSegment || '-';
+      
+      // Debug logging
+      console.log('RFM Analysis Results:');
+      console.log('Total Wallets:', wallets.length);
+      console.log('Segment Distribution:', segmentStats);
+      console.log('Churned Wallets:', wallets.filter(w => w.isChurned).length);
+      console.log('Top Segment by Volume:', topSegment);
+      
+      // Render RFM table
+      const rfmTable = document.getElementById('rfmTable');
+      rfmTable.innerHTML = '';
+      
+      // Function to show error message
+      const showGridError = (error) => {
+        console.error('Failed to initialize table:', error);
+        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+        if (rfmTable) {
+          rfmTable.innerHTML = `
+            <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4">
+              <div class="flex">
+                <div class="flex-shrink-0">
+                  <svg class="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                  </svg>
+                </div>
+                <div class="ml-3">
+                  <p class="text-sm text-yellow-700">
+                    Failed to load table. ${errorMessage}
+                  </p>
+                </div>
+              </div>
+            </div>
+          `;
+        }
+      };
+      
+      // Function to initialize the table
+      const initializeTable = () => {
+        // Prepare data for the table
+        const tableData = wallets.map(wallet => ({
+          wallet: wallet.wallet,
+          recency: wallet.recency,
+          frequency: wallet.frequency,
+          monetary: wallet.monetary,
+          rfmScore: wallet.rfmScore,
+          segment: wallet.segment,
+          isChurned: wallet.isChurned,
+          discordUsername: wallet.discordUsername || ''
+        }));
+        
+        // Clear any existing content
+        const rfmTable = document.getElementById('rfmTable');
+        rfmTable.innerHTML = '';
+        
+        // Create a wrapper div for better table styling and scrolling
+        const tableWrapper = document.createElement('div');
+        tableWrapper.classList.add('overflow-x-auto');
+        
+        // Create the table
+        const table = document.createElement('table');
+        table.classList.add('table-fixed', 'w-full', 'text-left', 'text-sm', 'text-gray-500');
+        
+        // Create the table head
+        const thead = document.createElement('thead');
+        thead.classList.add('bg-gray-50', 'border-b', 'border-gray-200');
+        const tr = document.createElement('tr');
+        const thWallet = document.createElement('th');
+        thWallet.textContent = 'Wallet';
+        thWallet.classList.add('w-1/6', 'px-4', 'py-2', 'text-left', 'text-xs', 'font-medium', 'text-gray-500', 'uppercase', 'tracking-wider');
+        const thDiscord = document.createElement('th');
+        thDiscord.textContent = 'Discord';
+        thDiscord.classList.add('w-1/6', 'px-4', 'py-2', 'text-left', 'text-xs', 'font-medium', 'text-gray-500', 'uppercase', 'tracking-wider');
+        const thRecency = document.createElement('th');
+        thRecency.textContent = 'Days Since Last Seen';
+        thRecency.classList.add('w-1/6', 'px-4', 'py-2', 'text-left', 'text-xs', 'font-medium', 'text-gray-500', 'uppercase', 'tracking-wider');
+        const thFrequency = document.createElement('th');
+        thFrequency.textContent = 'Transactions';
+        thFrequency.classList.add('w-1/6', 'px-4', 'py-2', 'text-left', 'text-xs', 'font-medium', 'text-gray-500', 'uppercase', 'tracking-wider');
+        const thMonetary = document.createElement('th');
+        thMonetary.textContent = 'Total Volume';
+        thMonetary.classList.add('w-1/6', 'px-4', 'py-2', 'text-left', 'text-xs', 'font-medium', 'text-gray-500', 'uppercase', 'tracking-wider');
+        const thRfmScore = document.createElement('th');
+        thRfmScore.textContent = 'RFM Score';
+        thRfmScore.classList.add('w-1/6', 'px-4', 'py-2', 'text-left', 'text-xs', 'font-medium', 'text-gray-500', 'uppercase', 'tracking-wider');
+        const thSegment = document.createElement('th');
+        thSegment.textContent = 'Segment';
+        thSegment.classList.add('w-1/6', 'px-4', 'py-2', 'text-left', 'text-xs', 'font-medium', 'text-gray-500', 'uppercase', 'tracking-wider');
+        const thStatus = document.createElement('th');
+        thStatus.textContent = 'Status';
+        thStatus.classList.add('w-1/6', 'px-4', 'py-2', 'text-left', 'text-xs', 'font-medium', 'text-gray-500', 'uppercase', 'tracking-wider');
+        tr.appendChild(thWallet);
+        tr.appendChild(thDiscord);
+        tr.appendChild(thRecency);
+        tr.appendChild(thFrequency);
+        tr.appendChild(thMonetary);
+        tr.appendChild(thRfmScore);
+        tr.appendChild(thSegment);
+        tr.appendChild(thStatus);
+        thead.appendChild(tr);
+        table.appendChild(thead);
+        
+        // Create the table body
+        const tbody = document.createElement('tbody');
+        tableData.forEach(row => {
+          const tr = document.createElement('tr');
+          tr.classList.add('border-b', 'border-gray-200', 'hover:bg-gray-100');
+          const tdWallet = document.createElement('td');
+          tdWallet.textContent = row.wallet;
+          tdWallet.classList.add('py-3', 'px-6');
+          const tdDiscord = document.createElement('td');
+          tdDiscord.textContent = row.discordUsername;
+          tdDiscord.classList.add('py-3', 'px-6');
+          const tdRecency = document.createElement('td');
+          tdRecency.textContent = row.recency;
+          tdRecency.classList.add('py-3', 'px-6');
+          const tdFrequency = document.createElement('td');
+          tdFrequency.textContent = row.frequency;
+          tdFrequency.classList.add('py-3', 'px-6');
+          const tdMonetary = document.createElement('td');
+          tdMonetary.textContent = `$${parseFloat(row.monetary).toLocaleString()}`;
+          tdMonetary.classList.add('py-3', 'px-6');
+          const tdRfmScore = document.createElement('td');
+          tdRfmScore.textContent = row.rfmScore;
+          tdRfmScore.classList.add('py-3', 'px-6');
+          
+          const tdSegment = document.createElement('td');
+          const segmentClass = {
+            'Champions': 'bg-purple-100 text-purple-800',
+            'Loyal': 'bg-blue-100 text-blue-800',
+            'Potential Loyalist': 'bg-green-100 text-green-800',
+            'About-to-Sleep': 'bg-yellow-100 text-yellow-800',
+            'Need Attention': 'bg-orange-100 text-orange-800',
+            'At Risk': 'bg-red-100 text-red-800',
+            'Others': 'bg-gray-100 text-gray-800'
+          }[row.segment] || 'bg-gray-100 text-gray-800';
+          tdSegment.innerHTML = `<span class="px-2 py-1 ${segmentClass} text-xs rounded-full">${row.segment}</span>`;
+          tdSegment.classList.add('py-3', 'px-6');
+          
+          const tdStatus = document.createElement('td');
+          if (row.isChurned) {
+            tdStatus.innerHTML = '<span class="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full">Churned</span>';
+          } else if (row.segment === 'At Risk') {
+            tdStatus.innerHTML = '<span class="px-2 py-1 bg-amber-100 text-amber-800 text-xs rounded-full">At Risk</span>';
+          } else if (row.segment === 'Champions') {
+            tdStatus.innerHTML = '<span class="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">Active</span>';
+          } else {
+            tdStatus.innerHTML = '<span class="px-2 py-1 bg-gray-100 text-gray-500 text-xs rounded-full">Inactive</span>';
+          }
+          tdStatus.classList.add('py-3', 'px-6');
+          tr.appendChild(tdWallet);
+          tr.appendChild(tdDiscord);
+          tr.appendChild(tdRecency);
+          tr.appendChild(tdFrequency);
+          tr.appendChild(tdMonetary);
+          tr.appendChild(tdRfmScore);
+          tr.appendChild(tdSegment);
+          tr.appendChild(tdStatus);
+          tbody.appendChild(tr);
+        });
+        table.appendChild(tbody);
+        
+        // Add the table to the wrapper
+        tableWrapper.appendChild(table);
+        
+        // Add the wrapper to the page
+        rfmTable.appendChild(tableWrapper);
+      };
+      
+      // Add aggregated tables
+      addAggregatedTables(wallets, rfmTable);
+      
+      console.log('RFM analysis completed', { wallets });
+      
+    } catch (error) {
+      console.error('Error in processRFM:', error);
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+      const resultSection = document.getElementById('resultSection');
+      if (resultSection) {
+        resultSection.innerHTML = `
+          <div class="bg-red-50 border-l-4 border-red-400 p-4">
+            <div class="flex">
+              <div class="flex-shrink-0">
+                <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                </svg>
+              </div>
+              <div class="ml-3">
+                <p class="text-sm text-red-700">
+                  Error processing RFM analysis: ${errorMessage}
+                </p>
+              </div>
+            </div>
+          </div>`;
+      }
+    }
+  }
+  
+  // Function to validate CSV data structure
+  function validateCSV(rows) {
+    if (!rows || !rows.length) {
+      throw new Error('CSV file is empty');
+    }
+    
+    const firstRow = rows[0];
+    const requiredColumns = ['day', 'wallet_address', 'SUM(amount)'];
+    const missingColumns = requiredColumns.filter(col => !(col in firstRow));
+    
+    if (missingColumns.length > 0) {
+      throw new Error(`Missing required columns: ${missingColumns.join(', ')}`);
+    }
+    
+    // Check if we have valid data in the first 5 rows
+    const sampleRows = rows.slice(0, 5);
+    for (let i = 0; i < sampleRows.length; i++) {
+      const row = sampleRows[i];
+      const day = row.day;
+      const amount = parseFloat(row['SUM(amount)']);
+      
+      if (!day || isNaN(Date.parse(day))) {
+        throw new Error(`Invalid date format in row ${i + 1}: ${day}`);
+      }
+      
+      if (isNaN(amount)) {
+        throw new Error(`Invalid amount in row ${i + 1}: ${row['SUM(amount)']}`);
+      }
+      
+      if (!row.wallet_address || row.wallet_address.trim() === '') {
+        throw new Error(`Missing wallet address in row ${i + 1}`);
+      }
+    }
+    
+    return true;
+  }
+  
+  // Function to add aggregated tables
+  function addAggregatedTables(wallets, container) {
+    if (!wallets || !wallets.length) {
+      throw new Error('No valid wallet data found');
+    }
+    
+    // Clear any existing content
+    container.innerHTML = '';
+    
+    // Calculate segment statistics
+    const segments = {};
+    let totalNotional = wallets.reduce((sum, w) => sum + w.monetary, 0);
+    
+    wallets.forEach(wallet => {
+      if (!segments[wallet.segment]) {
+        segments[wallet.segment] = {
+          count: 0,
+          totalNotional: 0,
+          wallets: []
+        };
+      }
+      segments[wallet.segment].count++;
+      segments[wallet.segment].totalNotional += wallet.monetary;
+      segments[wallet.segment].wallets.push(wallet);
+    });
+    
+    // Sort segments by count descending
+    const sortedSegments = Object.entries(segments)
+      .sort((a, b) => b[1].count - a[1].count);
+    
+    // Calculate quantiles for each metric
+    const recencyValues = wallets.map(w => w.recency).sort((a, b) => a - b);
+    const frequencyValues = wallets.map(w => w.frequency).sort((a, b) => a - b);
+    const monetaryValues = wallets.map(w => w.monetary).sort((a, b) => a - b);
+    
+    const getQuantile = (values, percentile) => {
+      const index = Math.floor(percentile * (values.length - 1));
+      return values[index];
+    };
+    
+    // Add Segmentation Snapshot table
+    let html = `
+      <div class="mt-12">
+        <h2 class="text-lg font-semibold mb-4">Segmentation Snapshot</h2>
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Wallet</th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Discord</th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <div class="flex items-center group relative">
+                    <span>Recency (days)</span>
+                    <div class="tooltip ml-1 cursor-help">
+                      <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h.01a1 1 0 100-2H10V9z" clip-rule="evenodd"></path>
+                      </svg>
+                      <div class="tooltip-content hidden group-hover:block absolute z-10 w-64 p-2 mt-1 -ml-2 text-xs text-gray-700 bg-white border border-gray-200 rounded-md shadow-lg">
+                        <strong>Recency (R):</strong> Days since last transaction. Lower values indicate more recent activity. Calculated from the reference date.
+                      </div>
+                    </div>
+                  </div>
+                </th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <div class="flex items-center group relative">
+                    <span>Frequency</span>
+                    <div class="tooltip ml-1 cursor-help">
+                      <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h.01a1 1 0 100-2H10V9z" clip-rule="evenodd"></path>
+                      </svg>
+                      <div class="tooltip-content hidden group-hover:block absolute z-10 w-64 p-2 mt-1 -ml-2 text-xs text-gray-700 bg-white border border-gray-200 rounded-md shadow-lg">
+                        <strong>Frequency (F):</strong> Number of unique days with transactions. Higher values indicate more frequent activity.
+                      </div>
+                    </div>
+                  </div>
+                </th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <div class="flex items-center group relative">
+                    <span>Monetary (USD)</span>
+                    <div class="tooltip ml-1 cursor-help">
+                      <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h.01a1 1 0 100-2H10V9z" clip-rule="evenodd"></path>
+                      </svg>
+                      <div class="tooltip-content hidden group-hover:block absolute z-10 w-64 p-2 mt-1 -ml-2 text-xs text-gray-700 bg-white border border-gray-200 rounded-md shadow-lg">
+                        <strong>Monetary (M):</strong> Total transaction amount in USD. Higher values indicate higher spending.
+                      </div>
+                    </div>
+                  </div>
+                </th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">RFM Score</th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Segment</th>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+    `;
+    
+    sortedSegments.forEach(([segment, data]) => {
+      const isBold = ['Champions', 'At Risk'].includes(segment);
+      const segmentName = isBold ? `<strong>${segment}</strong>` : segment;
+      const rule = getSegmentRule(segment);
+      const walletCount = isBold ? `<strong>${data.count}</strong>` : data.count;
+      const walletPct = ((data.count / wallets.length) * 100).toFixed(1);
+      const notionalPct = ((data.totalNotional / totalNotional) * 100).toFixed(1);
+      const notionalDisplay = isBold ? `<strong>${notionalPct}%</strong>` : `${notionalPct}%`;
+      
+      html += `
+        <tr>
+          <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${segmentName}</td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${rule}</td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${walletCount}</td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${walletPct}%</td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${notionalDisplay}</td>
+        </tr>
+      `;
+    });
+    
+    html += `
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+    
+    // Add Quantile Cut Offs table
+    html += `
+      <div class="mt-12">
+        <h2 class="text-lg font-semibold mb-4">Quantile Cut Offs</h2>
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Percentile Bucket</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Recency (days)</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Frequency (days)</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Monetary (USD)</th>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+    `;
+    
+    const percentiles = [0, 0.2, 0.4, 0.6, 0.8, 1.0];
+    for (let i = 0; i < percentiles.length - 1; i++) {
+      const startPct = Math.round(percentiles[i] * 100);
+      const endPct = Math.round(percentiles[i + 1] * 100);
+      
+      const recencyStart = Math.round(getQuantile(recencyValues, percentiles[i]));
+      const recencyEnd = Math.round(getQuantile(recencyValues, percentiles[i + 1]));
+      
+      const freqStart = Math.round(getQuantile(frequencyValues, percentiles[i]));
+      const freqEnd = Math.round(getQuantile(frequencyValues, percentiles[i + 1]));
+      
+      const monetaryStart = Math.round(getQuantile(monetaryValues, percentiles[i]));
+      const monetaryEnd = Math.round(getQuantile(monetaryValues, percentiles[i + 1]));
+      
+      const formatNumber = (num) => {
+        if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
+        if (num >= 1000) return `${(num / 1000).toFixed(1)}k`;
+        return num.toString();
+      };
+      
+      html += `
+        <tr>
+          <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${startPct} – ${endPct}%</td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${recencyStart} – ${recencyEnd}</td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${freqStart} – ${freqEnd}</td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatNumber(monetaryStart)} – ${formatNumber(monetaryEnd)}</td>
+        </tr>
+      `;
+    }
+    
+    html += `
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+    
+    // Add top wallets by segment
+    container.insertAdjacentHTML('beforeend', `
+      <div class="mt-8">
+        <h2 class="text-lg font-semibold mb-4">Top Wallets by Segment</h2>
+        <div class="flex flex-wrap items-center gap-2 mb-6 p-3 bg-gray-50 rounded-lg sticky top-2 z-10 shadow-sm">
+          <span class="text-sm font-medium text-gray-600">Jump to:</span>
+          <div class="flex flex-wrap gap-2">
+            ${Object.entries(segments).map(([segment, data]) => {
+              const segmentId = segment.toLowerCase().replace(/\s+/g, '-');
+              return `
+                <a href="#${segmentId}" 
+                   onclick="event.preventDefault(); 
+                            document.getElementById('${segmentId}').scrollIntoView({behavior: 'smooth'});"
+                   class="px-3 py-1.5 text-xs sm:text-sm font-medium rounded-full 
+                          ${getSegmentColorClass(segment, true)} 
+                          hover:opacity-90 transition-all transform hover:scale-105">
+                  ${segment}
+                </a>`;
+            }).join('')}
+          </div>
+        </div>
+    `);
+    
+    // Sort segments in the specified order
+    const segmentOrder = [
+      'Champions',
+      'Loyal',
+      'Potential Loyalist',
+      'About-to-Sleep',
+      'Need Attention',
+      'At Risk',
+      'Others'
+    ];
+    
+    segmentOrder.forEach(segment => {
+      if (!segments[segment]) return;
+      
+      const segmentWallets = [...segments[segment].wallets]
+        .sort((a, b) => b.monetary - a.monetary)
+        .slice(0, 50);
+      
+      if (segmentWallets.length === 0) return;
+      
+      const segmentId = segment.toLowerCase().replace(/\s+/g, '-');
+      const isBold = ['Champions', 'At Risk'].includes(segment);
+      const segmentName = isBold ? `<strong>${segment}</strong>` : segment;
+      const backToTop = `
+        <a href="#" 
+           onclick="window.scrollTo({top: 0, behavior: 'smooth'}); return false;"
+           class="text-xs text-gray-500 hover:text-gray-700 inline-flex items-center ml-2">
+          <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
+          </svg>
+          Top
+        </a>`;
+      
+      html += `
+        <div id="${segmentId}" class="mb-12 scroll-mt-16">
+          <div class="flex items-baseline justify-between pt-6 mb-3 border-t border-gray-100">
+            <h3 class="text-md font-medium">${segmentName} (${segmentWallets.length})${backToTop}</h3>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Wallet</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Discord</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <div class="flex items-center group relative">
+                      <span>Recency</span>
+                      <div class="tooltip ml-1 cursor-help">
+                        <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                          <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h.01a1 1 0 100-2H10V9z" clip-rule="evenodd"></path>
+                        </svg>
+                        <div class="tooltip-content hidden group-hover:block absolute z-10 w-64 p-2 mt-1 -ml-2 text-xs text-gray-700 bg-white border border-gray-200 rounded-md shadow-lg">
+                          <strong>Recency (R):</strong> Days since last transaction. Lower values indicate more recent activity. Calculated from the reference date.
+                        </div>
+                      </div>
+                    </div>
+                  </th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <div class="flex items-center group relative">
+                      <span>Frequency</span>
+                      <div class="tooltip ml-1 cursor-help">
+                        <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                          <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h.01a1 1 0 100-2H10V9z" clip-rule="evenodd"></path>
+                        </svg>
+                        <div class="tooltip-content hidden group-hover:block absolute z-10 w-64 p-2 mt-1 -ml-2 text-xs text-gray-700 bg-white border border-gray-200 rounded-md shadow-lg">
+                          <strong>Frequency (F):</strong> Number of unique days with transactions. Higher values indicate more frequent activity.
+                        </div>
+                      </div>
+                    </div>
+                  </th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <div class="flex items-center group relative">
+                      <span>Monetary (USD)</span>
+                      <div class="tooltip ml-1 cursor-help">
+                        <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                          <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h.01a1 1 0 100-2H10V9z" clip-rule="evenodd"></path>
+                        </svg>
+                        <div class="tooltip-content hidden group-hover:block absolute z-10 w-64 p-2 mt-1 -ml-2 text-xs text-gray-700 bg-white border border-gray-200 rounded-md shadow-lg">
+                          <strong>Monetary (M):</strong> Total transaction amount in USD. Higher values indicate higher spending.
+                        </div>
+                      </div>
+                    </div>
+                  </th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">RFM Score</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                </tr>
+              </thead>
+              <tbody class="bg-white divide-y divide-gray-200">
+      `;
+      
+      segmentWallets.forEach(wallet => {
+        html += `
+          <tr>
+            <td class="px-6 py-2 whitespace-nowrap text-sm font-mono text-gray-900 truncate max-w-xs" title="${wallet.wallet}">${wallet.wallet}</td>
+            <td class="px-6 py-2 whitespace-nowrap text-sm text-gray-500">${wallet.discordUsername || ''}</td>
+            <td class="px-6 py-2 whitespace-nowrap text-sm text-gray-500">${wallet.recency} days</td>
+            <td class="px-6 py-2 whitespace-nowrap text-sm text-gray-500">${wallet.frequency}</td>
+            <td class="px-6 py-2 whitespace-nowrap text-sm text-gray-500">${formatCurrency(wallet.monetary)}</td>
+            <td class="px-6 py-2 whitespace-nowrap text-sm text-gray-500">${wallet.rfmScore}</td>
+            <td class="px-6 py-2 whitespace-nowrap text-sm text-gray-500">${wallet.segment}</td>
+          </tr>
+        `;
+      });
+      
+      html += `
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    });
+    
+    html += `</div>`;
+    
+    // Add to container
+    const div = document.createElement('div');
+    div.innerHTML = html;
+    container.appendChild(div);
+  }
+  
+  // Helper function to get segment color class
+  function getSegmentColorClass(segment, isBg = false) {
+    const colors = {
+      'Champions': isBg ? 'bg-blue-100' : 'text-blue-800',
+      'Loyal': isBg ? 'bg-green-100' : 'text-green-800',
+      'Potential Loyalist': isBg ? 'bg-purple-100' : 'text-purple-800',
+      'New Customers': isBg ? 'bg-yellow-100' : 'text-yellow-800',
+      'Promising': isBg ? 'bg-indigo-100' : 'text-indigo-800',
+      'Need Attention': isBg ? 'bg-orange-100' : 'text-orange-800',
+      'About to Sleep': isBg ? 'bg-red-100' : 'text-red-800',
+      'At Risk': isBg ? 'bg-red-100' : 'text-red-800',
+      'Can\'t Lose Them': isBg ? 'bg-red-100' : 'text-red-800',
+      'Hibernating': isBg ? 'bg-gray-100' : 'text-gray-800',
+      'Lost': isBg ? 'bg-gray-300' : 'text-gray-600'
+    };
+  
+    return colors[segment] || (isBg ? 'bg-gray-100' : 'text-gray-800');
+  }
+
+  // Helper function to get segment rule
+  function getSegmentRule(segment) {
+    const rules = {
+      'Champions': 'R≥4 & F≥4 & M≥4',
+      'Loyal': 'R≥3 & F≥4',
+      'Potential Loyalist': 'R≥4 & F≤3',
+      'About-to-Sleep': 'R≤2 & F≥4',
+      'Need Attention': 'R=3 & F=3',
+      'At Risk': 'R≤2',
+      'Others': 'everything else'
+    };
+    return rules[segment] || '';
+  }
+  
+  // Format currency helper
+  function formatCurrency(amount) {
+    if (amount >= 1000000) {
+      return `$${(amount / 1000000).toFixed(1)}M`;
+    }
+    if (amount >= 1000) {
+      return `$${(amount / 1000).toFixed(1)}k`;
+    }
+    return `$${amount.toFixed(2)}`;
+  }
+
+  // Helper function to handle file errors
+  function handleFileError(file, message) {
+    console.error(message);
+    
+    // Update status
+    fileStatus.textContent = message;
+    fileStatus.className = 'text-sm text-red-600';
+    
+    // Update preview to show error
+    if (file?.previewElement) {
+      const progressBar = file.previewElement.querySelector('[data-dz-uploadprogress]');
+      if (progressBar) {
+        progressBar.classList.remove('bg-blue-400', 'bg-green-500');
+        progressBar.classList.add('bg-red-500');
+      }
+      
+      const errorElement = file.previewElement.querySelector('[data-dz-errormessage]');
+      if (errorElement) {
+        errorElement.textContent = message;
+      }
+    }
+    
+    // Disable run button
+    const runBtn = document.getElementById('runBtn');
+    if (runBtn) {
+      runBtn.disabled = true;
+      runBtn.classList.add('opacity-50', 'cursor-not-allowed');
+    }
+    
+    ready = false;
+  }
+  
+  // Initialize
+  console.log('RFM Analyzer initialized');
+});
+</script>
+</body>
+</html>
