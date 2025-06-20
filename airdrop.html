@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Airdrop Simulator</title>
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col items-center p-6">
+  
+  <header class="mb-8 w-full">
+    <h1 class="text-3xl font-bold mb-8 text-center">REYA Airdrop Simulator</h1>
+    <div class="flex flex-wrap items-center justify-between gap-3 w-full">
+      <a href="https://x.com/0xCK1" target="_blank" rel="noopener noreferrer"
+        class="inline-flex items-center justify-center h-12 min-w-[150px] px-4 py-2 rounded-xl text-base font-semibold border border-gray-300 bg-white text-gray-800 hover:bg-gray-100 transition focus:outline-none focus:ring-2 focus:ring-blue-500 whitespace-nowrap">
+        <i class="fa-brands fa-x-twitter text-xl"></i>
+        <span class="ml-2">Follow @0xCK1</span>
+      </a>
+      <a href="https://app.reya.xyz/?referredBy=q4d4ln7o" target="_blank" rel="noopener noreferrer"
+        class="inline-flex items-center justify-center h-12 min-w-[150px] px-4 py-2 rounded-xl text-base font-semibold border border-gray-300 bg-white text-gray-800 hover:bg-gray-100 transition focus:outline-none focus:ring-2 focus:ring-blue-500 whitespace-nowrap">
+        <i class="fa-solid fa-arrow-up-right-from-square text-xl"></i>
+        <span class="ml-2">Trade on REYA</span>
+      </a>
+    </div>
+  </header>
+  <!-- Card -->
+  <div class="w-full max-w-3xl bg-white p-8 rounded-2xl shadow-lg border border-gray-200">
+    <!------------- INPUTS ------------->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <!-- Deposited Money (USD) -->
+      <div>
+        <label for="deposit" class="block text-sm/6 font-medium text-gray-900">Deposited Money (USD)</label>
+        <div class="mt-2">
+          <div class="flex items-center rounded-md bg-white px-3 outline-1 -outline-offset-1 outline-gray-300 focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-indigo-600">
+            <div class="shrink-0 text-base text-gray-500 select-none sm:text-sm/6">$</div>
+            <input type="text" id="deposit" class="block min-w-0 grow py-1.5 pr-3 pl-1 text-base text-gray-900 placeholder:text-gray-400 focus:outline-none sm:text-sm/6" placeholder="80,000" />
+            <div class="shrink-0 text-base text-gray-500 select-none sm:text-sm/6">USD</div>
+          </div>
+        </div>
+      </div>
+      <!-- Current Money Value (USD) -->
+      <div>
+        <label for="currentValue" class="block text-sm/6 font-medium text-gray-900">Current Money Value (USD)</label>
+        <div class="mt-2">
+          <div class="flex items-center rounded-md bg-white px-3 outline-1 -outline-offset-1 outline-gray-300 focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-indigo-600">
+            <div class="shrink-0 text-base text-gray-500 select-none sm:text-sm/6">$</div>
+            <input type="text" id="currentValue" class="block min-w-0 grow py-1.5 pr-3 pl-1 text-base text-gray-900 placeholder:text-gray-400 focus:outline-none sm:text-sm/6" placeholder="83,872" />
+            <div class="shrink-0 text-base text-gray-500 select-none sm:text-sm/6">USD</div>
+          </div>
+        </div>
+      </div>
+      <!-- FDV (USD) -->
+      <div>
+        <label for="fdv" class="block text-sm/6 font-medium text-gray-900">FDV at TGE (USD)</label>
+        <div class="mt-2">
+          <div class="flex items-center rounded-md bg-white px-3 outline-1 -outline-offset-1 outline-gray-300 focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-indigo-600">
+            <div class="shrink-0 text-base text-gray-500 select-none sm:text-sm/6">$</div>
+            <input type="text" id="fdv" class="block min-w-0 grow py-1.5 pr-3 pl-1 text-base text-gray-900 placeholder:text-gray-400 focus:outline-none sm:text-sm/6" placeholder="100,000,000" />
+            <div class="shrink-0 text-base text-gray-500 select-none sm:text-sm/6">USD</div>
+          </div>
+        </div>
+      </div>
+      <!-- TGE % -->
+      <div>
+        <label for="tgePercent" class="block text-sm/6 font-medium text-gray-900">TGE Allocation (%)</label>
+        <div class="mt-2">
+          <input type="text" id="tgePercent" class="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6" placeholder="20" />
+        </div>
+      </div>      
+      <!-- Current Points -->
+      <div>
+        <label for="currentPoints" class="block text-sm/6 font-medium text-gray-900">Current Points</label>
+        <div class="mt-2">
+          <input type="text" id="currentPoints" class="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6" placeholder="7,768" />
+        </div>
+      </div>
+      <!-- Total Points -->
+      <div>
+        <label for="totalPoints" class="block text-sm/6 font-medium text-gray-900">Total Points</label>
+        <div class="mt-2">
+          <input type="text" id="totalPoints" class="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6" placeholder="10,000,000" />
+        </div>
+      </div>
+    </div>
+
+    <!------------- ACTION ------------->
+    <button id="calculateBtn" class="mt-8 w-full py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition">Calculate</button>
+
+    <!------------- RESULTS ------------->
+    <div id="results" class="mt-10 hidden">
+      <h2 class="text-2xl font-semibold mb-6 text-center">Results</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="bg-gray-50 p-4 rounded-lg shadow-sm">
+          <div class="text-sm text-gray-500">Yield ($)</div>
+          <div id="yieldAmount" class="text-xl font-medium text-blue-700 mt-1">-</div>
+        </div>
+        <div class="bg-gray-50 p-4 rounded-lg shadow-sm">
+          <div class="text-sm text-gray-500">All-time Yield %</div>
+          <div id="allTimeYieldPct" class="text-xl font-medium text-blue-700 mt-1">-</div>
+        </div>
+        <div class="bg-gray-50 p-4 rounded-lg shadow-sm">
+          <div class="text-sm text-gray-500">Point Share %</div>
+          <div id="pointSharePct" class="text-xl font-medium text-blue-700 mt-1">-</div>
+        </div>
+        <div class="bg-gray-50 p-4 rounded-lg shadow-sm">
+          <div class="text-sm text-gray-500">USD / Point</div>
+          <div id="usdPerPoint" class="text-xl font-medium text-blue-700 mt-1">-</div>
+        </div>
+        <div class="bg-gray-50 p-4 rounded-lg shadow-sm">
+          <div class="text-sm text-gray-500">Airdrop Value ($)</div>
+          <div id="airdropValue" class="text-xl font-medium text-green-700 mt-1">-</div>
+        </div>
+        <div class="bg-gray-50 p-4 rounded-lg shadow-sm">
+          <div class="text-sm text-gray-500">Points Yield %</div>
+          <div id="pointsYieldPct" class="text-xl font-medium text-green-700 mt-1">-</div>
+        </div>
+        <div class="bg-gray-50 p-4 rounded-lg shadow-sm md:col-span-2">
+          <div class="text-sm text-gray-500">Net Yield %</div>
+          <div id="netYieldPct" class="text-2xl font-semibold text-purple-700 mt-1">-</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!------------- SCRIPT ------------->
+  <script>
+    /* ------------------ Helpers ------------------ */
+    const numberFormatter = new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 });
+    const percentFormatter = v => (isNaN(v) ? '-' : (v * 100).toFixed(2) + '%');
+    const usdFormatter = v => (isNaN(v) ? '-' : '$' + numberFormatter.format(v));
+
+    // Strip commas and spaces for numeric parsing
+    const unformat = str => parseFloat(str.replace(/,/g, ''));
+
+    // Apply comma separators on blur, remove on focus
+    function attachNumberFormatting(id) {
+      const el = document.getElementById(id);
+      el.addEventListener('focus', () => {
+        el.value = el.value.replace(/,/g, '');
+      });
+      el.addEventListener('blur', () => {
+        const num = unformat(el.value);
+        if (!isNaN(num)) {
+          el.value = numberFormatter.format(num);
+        }
+      });
+    }
+
+    // Fields requiring commas
+    ['deposit', 'currentValue', 'fdv', 'currentPoints', 'totalPoints'].forEach(attachNumberFormatting);
+
+    // -------------- Main logic --------------
+    document.getElementById('calculateBtn').addEventListener('click', () => {
+      const deposit = unformat(document.getElementById('deposit').value);
+      const currentValue = unformat(document.getElementById('currentValue').value);
+      const fdv = unformat(document.getElementById('fdv').value);
+      const currentPoints = unformat(document.getElementById('currentPoints').value);
+      const totalPoints = unformat(document.getElementById('totalPoints').value);
+      const tgePercent = unformat(document.getElementById('tgePercent').value);
+
+      // Basic validation
+      if ([deposit, currentValue, fdv, currentPoints, totalPoints, tgePercent].some(v => isNaN(v) || v < 0)) {
+        alert('Please enter valid positive numbers in all fields.');
+        return;
+      }
+
+      // Calculations
+      const yieldAmount = currentValue - deposit;
+      const allTimeYieldPct = yieldAmount / deposit;
+      const pointShare = currentPoints / totalPoints;
+      const tokenValueTGE = fdv * (tgePercent / 100);
+      const usdPerPoint = tokenValueTGE / totalPoints;
+      const airdropValue = currentPoints * usdPerPoint;
+      const pointsYieldPct = airdropValue / deposit;
+      const netYieldPct = allTimeYieldPct + pointsYieldPct;
+
+      // Render
+      document.getElementById('yieldAmount').textContent = usdFormatter(yieldAmount);
+      document.getElementById('allTimeYieldPct').textContent = percentFormatter(allTimeYieldPct);
+      document.getElementById('pointSharePct').textContent = percentFormatter(pointShare);
+      document.getElementById('usdPerPoint').textContent = usdFormatter(usdPerPoint);
+      document.getElementById('airdropValue').textContent = usdFormatter(airdropValue);
+      document.getElementById('pointsYieldPct').textContent = percentFormatter(pointsYieldPct);
+      document.getElementById('netYieldPct').textContent = percentFormatter(netYieldPct);
+
+      document.getElementById('results').classList.remove('hidden');
+    });
+  </script>
+</body>
+</html>
